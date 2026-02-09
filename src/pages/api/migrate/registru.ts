@@ -136,8 +136,9 @@ async function migrateSingleRegistru(username: string, year: string) {
     
     // Caută fișierul în mai multe locații
     const possiblePaths = [
-      join(process.cwd(), 'public', 'data', fileName), // Build (Vercel)
-      join(process.cwd(), 'data', fileName), // Development
+      join(process.cwd(), '.vercel', 'output', 'static', 'data', fileName), // Vercel build output
+      join(process.cwd(), 'public', 'data', fileName), // Local public
+      join(process.cwd(), 'data', fileName), // Local development
     ];
     
     let filePath: string | null = null;
@@ -149,6 +150,18 @@ async function migrateSingleRegistru(username: string, year: string) {
     }
     
     if (!filePath) {
+      // Pe Vercel, încercă să citească prin fetch
+      if (process.env.VERCEL) {
+        return new Response(JSON.stringify({ 
+          error: `Fișierul ${fileName} nu este accesibil prin filesystem pe Vercel`,
+          note: 'Folosește POST cu datele JSON în body sau scriptul local: node scripts/migrate-to-redis.js',
+          searched: possiblePaths
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         error: `Fișierul ${fileName} nu există`,
         searched: possiblePaths,
@@ -198,12 +211,14 @@ async function migrateSingleRegistru(username: string, year: string) {
 
 async function migrateAllRegistru() {
   try {
-    // Pe Vercel, caută în public/data/ (fișierele sunt incluse în build)
-    // Pe local, caută în data/
+    // Pe Vercel, fișierele din public/ sunt servite static
+    // Trebuie să le citim prin fetch sau din .vercel/output/static
+    // Pe local, le citim din data/ sau public/data/
+    
     const possibleDirs = [
-      join(process.cwd(), 'public', 'data'), // Build (Vercel)
-      join(process.cwd(), 'data'), // Development
-      join(import.meta.url.includes('file://') ? new URL(import.meta.url).pathname : process.cwd(), 'public', 'data'),
+      join(process.cwd(), '.vercel', 'output', 'static', 'data'), // Vercel build output
+      join(process.cwd(), 'public', 'data'), // Local public
+      join(process.cwd(), 'data'), // Local development
     ];
     
     let dataDir: string | null = null;
@@ -215,6 +230,102 @@ async function migrateAllRegistru() {
     }
     
     if (!dataDir) {
+      // Pe Vercel, încercă să citească prin fetch din public/
+      if (process.env.VERCEL) {
+        // Lista cunoscută de fișiere (din public/data/)
+        const knownFiles = [
+          'andreea_registru_2024.json',
+          'andreea_registru_2026.json',
+          'razvan_registru_2024.json',
+          'roxana_registru_2024.json',
+          'tudor_registru_2025.json',
+          'tudor_registru_2026.json',
+        ];
+        
+        const results: any[] = [];
+        const baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'https://pfa-expenses.vercel.app';
+        
+        for (const fileName of knownFiles) {
+          try {
+            const match = fileName.match(/^(.+)_registru_(\d{4})\.json$/);
+            if (!match) {
+              results.push({ fileName, status: 'skipped', reason: 'Format invalid' });
+              continue;
+            }
+            
+            const [, username, year] = match;
+            const usernameLower = username.toLowerCase();
+            const redisKey = `registru:${usernameLower}:${year}`;
+            
+            // Verifică dacă există deja în Redis
+            const existing = await readJSONFile(redisKey);
+            if (existing && Array.isArray(existing) && existing.length > 0) {
+              results.push({ 
+                fileName, 
+                status: 'skipped', 
+                reason: 'Există deja în Redis',
+                count: existing.length 
+              });
+              continue;
+            }
+            
+            // Citește prin fetch de la URL-ul public
+            const fileUrl = `${baseUrl}/data/${fileName}`;
+            const response = await fetch(fileUrl);
+            
+            if (!response.ok) {
+              results.push({ 
+                fileName, 
+                status: 'skipped', 
+                reason: `Nu există la ${fileUrl} (${response.status})` 
+              });
+              continue;
+            }
+            
+            const entries = await response.json();
+            
+            if (Array.isArray(entries)) {
+              await writeJSONFile(redisKey, entries);
+              results.push({ 
+                fileName, 
+                status: 'migrated', 
+                count: entries.length,
+                key: redisKey
+              });
+            } else {
+              results.push({ fileName, status: 'error', reason: 'Format invalid' });
+            }
+          } catch (error: any) {
+            results.push({ 
+              fileName, 
+              status: 'error', 
+              error: error.message 
+            });
+          }
+        }
+        
+        const migrated = results.filter(r => r.status === 'migrated').length;
+        const skipped = results.filter(r => r.status === 'skipped').length;
+        const errors = results.filter(r => r.status === 'error').length;
+        
+        return new Response(JSON.stringify({ 
+          message: `Migrare completă: ${migrated} migrate, ${skipped} skipate, ${errors} erori`,
+          summary: {
+            total: knownFiles.length,
+            migrated,
+            skipped,
+            errors
+          },
+          results,
+          note: migrated > 0 ? 'Fișierele migrate pot fi șterse din public/data/ după verificare' : null
+        }, null, 2), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         error: 'Nu s-au găsit fișiere de registru',
         searched: possibleDirs,
