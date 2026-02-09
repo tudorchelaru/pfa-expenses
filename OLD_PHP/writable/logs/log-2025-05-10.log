@@ -1,0 +1,61 @@
+ERROR - 2025-05-10 08:08:40 --> Unknown column 'updated_at' in 'field list'
+CRITICAL - 2025-05-10 08:08:40 --> Unknown column 'updated_at' in 'field list'
+#0 /home/avocatqt/dev.avocatchelaru.ro/system/Database/MySQLi/Connection.php(292): mysqli->query('INSERT INTO `us...', 0)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseConnection.php(670): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `us...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseConnection.php(598): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `us...')
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseBuilder.php(1771): CodeIgniter\Database\BaseConnection->query('INSERT INTO `us...', Array, false)
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/Model.php(239): CodeIgniter\Database\BaseBuilder->insert()
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/BaseModel.php(738): CodeIgniter\Model->doInsert(Array)
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/Model.php(625): CodeIgniter\BaseModel->insert(Array, true)
+#7 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(550): CodeIgniter\Model->insert(Array)
+#8 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->salveazaUser()
+#9 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#10 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#12 {main}
+CRITICAL - 2025-05-10 08:17:45 --> file_get_contents(/home/avocatqt/dev.avocatchelaru.ro/writable/tudor_registru.json): failed to open stream: No such file or directory
+#0 [internal function]: CodeIgniter\Debug\Exceptions->errorHandler(2, 'file_get_conten...', '/home/avocatqt/...', 112, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(112): file_get_contents('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#5 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#6 {main}
+CRITICAL - 2025-05-10 08:32:54 --> file_get_contents(/home/avocatqt/dev.avocatchelaru.ro/writable/razvan_registru.json): failed to open stream: No such file or directory
+#0 [internal function]: CodeIgniter\Debug\Exceptions->errorHandler(2, 'file_get_conten...', '/home/avocatqt/...', 112, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(112): file_get_contents('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#5 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#6 {main}
+CRITICAL - 2025-05-10 08:33:10 --> file_get_contents(/home/avocatqt/dev.avocatchelaru.ro/writable/razvan_registru.json): failed to open stream: No such file or directory
+#0 [internal function]: CodeIgniter\Debug\Exceptions->errorHandler(2, 'file_get_conten...', '/home/avocatqt/...', 112, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(112): file_get_contents('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#5 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#6 {main}
+CRITICAL - 2025-05-10 08:36:51 --> file_get_contents(/home/avocatqt/dev.avocatchelaru.ro/writable/razvan_registru.json): failed to open stream: No such file or directory
+#0 [internal function]: CodeIgniter\Debug\Exceptions->errorHandler(2, 'file_get_conten...', '/home/avocatqt/...', 112, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(112): file_get_contents('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#5 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#6 {main}
+CRITICAL - 2025-05-10 08:40:02 --> Invalid argument supplied for foreach()
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(138): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Invalid argumen...', '/home/avocatqt/...', 138, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#4 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#5 {main}
+CRITICAL - 2025-05-10 08:40:24 --> Invalid argument supplied for foreach()
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(138): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Invalid argumen...', '/home/avocatqt/...', 138, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->registruGenerator()
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#4 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#5 {main}

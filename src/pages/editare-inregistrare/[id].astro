@@ -1,0 +1,336 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const { id } = Astro.params;
+const entryId = parseInt(id || '0');
+
+// Încarcă intrarea prin API
+let entry: any = null;
+let exists = false;
+
+try {
+  const response = await fetch(`${Astro.url.origin}/api/registru/get/${entryId}`, {
+    headers: {
+      Cookie: Astro.request.headers.get('Cookie') || ''
+    }
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    entry = data.entry;
+    exists = true;
+  }
+} catch (error) {
+  console.error('Eroare la încărcare:', error);
+}
+
+if (!exists) {
+  return Astro.redirect('/editare-registru');
+}
+---
+
+<Layout title="Modifică Înregistrare - PFA Expenses">
+  <div class="form-container">
+    <div class="form-card">
+      <div class="form-header">
+        <h2>✏️ Editare înregistrare</h2>
+        <p>Modifică datele înregistrării</p>
+      </div>
+
+      <div id="alert-container"></div>
+
+      <form id="edit-form" method="POST" action={`/api/registru/update/${entryId}`}>
+        <div class="mb-3">
+          <label for="data" class="form-label">📅 Data</label>
+          <input type="date" name="data" id="data" value={entry.data} class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">💳 Tip tranzacție</label><br />
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="tip" id="tip_incasare" value="incasare" checked={entry.tip === 'incasare'} />
+            <label class="form-check-label" for="tip_incasare">Încasare</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="tip" id="tip_plata" value="plata" checked={entry.tip === 'plata'} />
+            <label class="form-check-label" for="tip_plata">Plată</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">💵 Metodă de plată</label><br />
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="metoda" id="metoda_numerar" value="numerar" checked={entry.metoda === 'numerar'} />
+            <label class="form-check-label" for="metoda_numerar">Numerar</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="metoda" id="metoda_banca" value="banca" checked={entry.metoda === 'banca'} />
+            <label class="form-check-label" for="metoda_banca">Bancă</label>
+          </div>
+        </div>
+
+        <div id="plata_fields" style={entry.tip === 'plata' ? 'display: block;' : 'display: none;'}>
+          <div class="mb-3">
+            <label for="tip_cheltuiala" class="form-label">📋 Tip cheltuială [ plata ]</label>
+            <select id="tip_cheltuiala" name="tip_cheltuiala" class="form-select">
+              <option value="diverse" selected={entry.tip_cheltuiala === 'diverse'}>Diverse</option>
+              <option value="cincizeci_la_suta" selected={entry.tip_cheltuiala === 'cincizeci_la_suta'}>50%</option>
+              <option value="rata_leasing" selected={entry.tip_cheltuiala === 'rata_leasing'}>Rată leasing</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="deductibilitate" class="form-label">📊 Deductibilitate (%) [ plata ]</label>
+            <span class="text-info d-block mb-2">💡 Se alege 50% DOAR la ce se deduce la jumătate → în rest lăsăm 100%</span>
+            <select id="deductibilitate" name="deductibilitate" class="form-select">
+              <option value="100" selected={entry.deductibilitate == 100}>100%</option>
+              <option value="50" selected={entry.deductibilitate == 50}>50%</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="suma" class="form-label">💰 Suma</label>
+          <input type="number" step="0.01" name="suma" id="suma" value={entry.suma} class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label for="valuta" class="form-label">🌍 Valută</label>
+          <input type="text" name="valuta" id="valuta" value={entry.valuta} class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label for="document" class="form-label">📄 Document</label>
+          <input type="text" name="document" id="document" value={entry.document || ''} class="form-control" />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="submit-button">💾 Salvează modificările</button>
+          <a href="/editare-registru" class="cancel-button">❌ Anulează</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  function togglePlataFields() {
+    const tipRadios = document.querySelectorAll('input[name="tip"]') as NodeListOf<HTMLInputElement>;
+    const isPlata = Array.from(tipRadios).find(r => r.checked)?.value === 'plata';
+    const plataFields = document.getElementById('plata_fields');
+    const tipCheltuiala = document.getElementById('tip_cheltuiala') as HTMLSelectElement;
+    const deductibilitate = document.getElementById('deductibilitate') as HTMLSelectElement;
+
+    if (isPlata) {
+      plataFields!.style.display = 'block';
+      tipCheltuiala!.disabled = false;
+      deductibilitate!.disabled = false;
+    } else {
+      plataFields!.style.display = 'none';
+      tipCheltuiala!.disabled = true;
+      deductibilitate!.disabled = true;
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    togglePlataFields();
+    document.querySelectorAll('input[name="tip"]').forEach(radio => {
+      radio.addEventListener('change', togglePlataFields);
+    });
+  });
+
+  document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+    const alertContainer = document.getElementById('alert-container');
+    
+    if (response.ok) {
+      alertContainer!.innerHTML = `
+        <div class="alert alert-success" style="background: rgba(40, 167, 69, 0.2); border: 1px solid rgba(40, 167, 69, 0.5); color: #155724; border-radius: 10px; padding: 1rem;">
+          ✅ ${result.message || 'Înregistrare actualizată cu succes!'}
+        </div>
+      `;
+      setTimeout(() => {
+        window.location.href = '/editare-registru';
+      }, 1500);
+    } else {
+      alertContainer!.innerHTML = `
+        <div class="alert alert-danger" style="background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: #721c24; border-radius: 10px; padding: 1rem;">
+          ❌ ${result.error || 'Eroare la actualizare'}
+        </div>
+      `;
+    }
+  });
+</script>
+
+<style>
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .form-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .form-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+  }
+
+  .form-header h2 {
+    font-size: 2rem;
+    color: #667eea;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .form-header p {
+    color: #666;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .form-label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+    display: block;
+    font-size: 0.95rem;
+  }
+
+  .form-control,
+  .form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .form-check-inline {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-check-input {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    accent-color: #667eea;
+  }
+
+  .form-check-label {
+    cursor: pointer;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .text-info {
+    color: #667eea;
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+  }
+
+  .submit-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .submit-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  .cancel-button {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border: 2px solid rgba(108, 117, 125, 0.3);
+    padding: 0.875rem 2rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+  }
+
+  .cancel-button:hover {
+    background: rgba(108, 117, 125, 0.2);
+    border-color: rgba(108, 117, 125, 0.5);
+    transform: translateY(-2px);
+    color: #495057;
+  }
+
+  #plata_fields {
+    background: rgba(102, 126, 234, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .form-card {
+      padding: 1.5rem;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .submit-button,
+    .cancel-button {
+      width: 100%;
+    }
+  }
+</style>

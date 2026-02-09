@@ -1,0 +1,42 @@
+# build output
+dist/
+.output/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+.env.local
+
+# macOS-specific files
+.DS_Store
+
+# Vercel
+.vercel
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+
+# Data files (registru JSON, PDF-uri generate)
+data/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tailwind.config.cjs
+!astro.config.mjs

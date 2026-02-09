@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Verificare autentificare
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="Generează Registre PDF - PFA Expenses">
+  <div class="container-fluid py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-xl-6">
+        <div class="glass-card p-4 p-md-5">
+          <h1 class="mb-4 text-white">📄 Generează Registre PDF</h1>
+          
+          <div class="info-section mb-4">
+            <p class="text-white-50 mb-3">
+              Această funcție va genera registre PDF pentru toți anii pentru care există date în registru.
+            </p>
+            <ul class="text-white-50" style="list-style: none; padding-left: 0;">
+              <li class="mb-2">✓ Grupează datele pe luni și ani</li>
+              <li class="mb-2">✓ Calculează totaluri pentru încasări și plăți</li>
+              <li class="mb-2">✓ Calculează profit/pierdere</li>
+              <li class="mb-2">✓ Calculează deductibilitate și impozit</li>
+            </ul>
+          </div>
+
+          <div id="alert-container"></div>
+
+          <div class="d-flex gap-3 justify-content-center">
+            <button 
+              id="generate-btn" 
+              class="btn-generate"
+              style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);"
+            >
+              🚀 Generează PDF-uri
+            </button>
+            <a 
+              href="/registre" 
+              class="btn-back"
+              style="background: rgba(255, 255, 255, 0.2); color: white; text-decoration: none; border-radius: 12px; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600; transition: all 0.3s ease; display: inline-flex; align-items: center;"
+            >
+              Vezi Registre
+            </a>
+          </div>
+
+          <div id="loading" style="display: none; text-align: center; margin-top: 2rem;">
+            <div class="spinner-border text-light" role="status">
+              <span class="visually-hidden">Se generează...</span>
+            </div>
+            <p class="text-white mt-3">Se generează PDF-urile, te rog așteaptă...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const generateBtn = document.getElementById('generate-btn');
+  const loadingDiv = document.getElementById('loading');
+  const alertContainer = document.getElementById('alert-container');
+
+  function showAlert(message: string, type: 'success' | 'error') {
+    alertContainer.innerHTML = `
+      <div class="alert alert-${type === 'success' ? 'success' : 'danger'}" role="alert" style="background: ${type === 'success' ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}; border: 1px solid ${type === 'success' ? 'rgba(40, 167, 69, 0.5)' : 'rgba(220, 53, 69, 0.5)'}; color: white; border-radius: 10px; padding: 1rem;">
+        ${message}
+      </div>
+    `;
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      alertContainer.innerHTML = '';
+    }, 5000);
+  }
+
+  generateBtn?.addEventListener('click', async () => {
+    if (!generateBtn) return;
+
+    generateBtn.disabled = true;
+    loadingDiv!.style.display = 'block';
+    alertContainer.innerHTML = '';
+
+    try {
+      const response = await fetch('/api/genereaza-registre', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showAlert(data.message || 'PDF-urile au fost generate cu succes!', 'success');
+        // Redirect la pagina de registre după 2 secunde
+        setTimeout(() => {
+          window.location.href = '/registre';
+        }, 2000);
+      } else {
+        showAlert(data.error || 'Eroare la generarea PDF-urilor', 'error');
+        generateBtn.disabled = false;
+        loadingDiv!.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('Eroare:', error);
+      showAlert('Eroare la comunicarea cu serverul', 'error');
+      generateBtn.disabled = false;
+      loadingDiv!.style.display = 'none';
+    }
+  });
+
+  // Hover effects
+  generateBtn?.addEventListener('mouseenter', function() {
+    this.style.transform = 'scale(1.05)';
+    this.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+  });
+
+  generateBtn?.addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+    this.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+  });
+</script>
+
+<style>
+  .glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-generate:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-back:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    .d-flex.gap-3 {
+      flex-direction: column;
+    }
+  }
+</style>

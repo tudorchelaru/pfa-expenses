@@ -1,0 +1,521 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="Adaugă înregistrare - PFA Expenses">
+  <div class="form-container">
+    <div class="form-card">
+      <div class="form-header">
+        <h2>➕ Adaugă înregistrare în registru</h2>
+        <p>Completează datele pentru o nouă încasare sau plată</p>
+      </div>
+
+      <div id="alert-container"></div>
+
+      <form id="registru-form" method="POST" action="/api/registru/save">
+        <div class="mb-3">
+          <label for="data" class="form-label">📅 Data</label>
+          <div class="date-input-wrapper">
+            <input type="date" class="form-control date-input" name="data" id="data" required autofocus />
+            <span class="date-icon">📅</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">💳 Tip</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="tip" id="tip_incasare" value="incasare" checked />
+              <span class="radio-custom"></span>
+              <span class="radio-label">Încasare</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="tip" id="tip_plata" value="plata" />
+              <span class="radio-custom"></span>
+              <span class="radio-label">Plată</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">💵 Metodă</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="metoda" id="metoda_numerar" value="numerar" checked />
+              <span class="radio-custom"></span>
+              <span class="radio-label">Numerar</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="metoda" id="metoda_banca" value="banca" />
+              <span class="radio-custom"></span>
+              <span class="radio-label">Bancă</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="plata_fields" style="display: none;">
+          <div class="mb-3">
+            <label for="tip_cheltuiala" class="form-label">Tip cheltuială [ plata ]</label>
+            <select id="tip_cheltuiala" name="tip_cheltuiala" class="form-select" disabled>
+              <option value="diverse">Diverse</option>
+              <option value="cincizeci_la_suta">50%</option>
+              <option value="rata_leasing">Rată leasing</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="deductibilitate" class="form-label">Deductibilitate (%) [ plata]</label>
+            <span class="text-danger d-block mb-2">Se alege 50% DOAR la ce se deduce la jumătate → în rest lăsăm 100%</span>
+            <select id="deductibilitate" name="deductibilitate" class="form-select" disabled>
+              <option value="100">100%</option>
+              <option value="50">50%</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="document" class="form-label">Document</label>
+          <input type="text" class="form-control" name="document" id="document" required placeholder="ex: Factura client X" />
+        </div>
+
+        <input type="hidden" name="valuta" value="RON" />
+
+        <div class="mb-3">
+          <label for="suma" class="form-label">Suma (ex: 507.6)</label>
+          <input type="text" class="form-control" name="suma" id="suma" required />
+        </div>
+
+        <button type="submit" class="submit-button">💾 Adaugă înregistrare</button>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .form-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .form-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .form-header h2 {
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .form-header p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  #alert-container {
+    margin-bottom: 1.5rem;
+  }
+
+  #alert-container .alert {
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+  }
+
+  #alert-container .alert-success {
+    background: rgba(40, 167, 69, 0.2);
+    color: #fff;
+    border: 1px solid rgba(40, 167, 69, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  #alert-container .alert-danger {
+    background: rgba(220, 53, 69, 0.2);
+    color: #fff;
+    border: 1px solid rgba(220, 53, 69, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .mb-3 {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .form-control,
+  .form-select {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    color: #fff;
+  }
+
+  .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 3rem;
+  }
+
+  .form-select option {
+    background: #667eea;
+    color: #fff;
+  }
+
+  /* Wrapper pentru input-ul de dată */
+  .date-input-wrapper {
+    position: relative;
+  }
+
+  .date-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .date-input {
+    cursor: pointer;
+    padding-right: 1rem;
+    position: relative;
+  }
+  
+  .date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(1);
+    opacity: 0.8;
+    padding: 0.25rem;
+    margin-left: 0.5rem;
+  }
+  
+  .date-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Radio buttons custom */
+  .radio-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 140px;
+    position: relative;
+  }
+
+  .radio-option:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .radio-custom {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: transform 0.3s ease;
+  }
+
+  .radio-option input[type="radio"]:checked + .radio-custom {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.2);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  }
+
+  .radio-option input[type="radio"]:checked + .radio-custom::after {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .radio-option input[type="radio"]:checked ~ .radio-label {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .radio-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    transition: all 0.3s ease;
+    user-select: none;
+  }
+
+  .text-danger {
+    color: #dc3545;
+    font-size: 0.85rem;
+  }
+
+  .submit-button {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    margin-top: 1.5rem;
+  }
+
+  .submit-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  .submit-button:active {
+    transform: translateY(0);
+  }
+
+  #plata_fields {
+    background: rgba(102, 126, 234, 0.15);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    margin-top: 1rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .text-danger {
+    color: rgba(255, 200, 200, 0.9);
+    font-size: 0.85rem;
+    background: rgba(220, 53, 69, 0.2);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    .form-card {
+      padding: 1.5rem;
+    }
+
+    .form-header h2 {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Toggle câmpuri pentru plată
+  function togglePlataFields() {
+    const tipPlataEl = document.getElementById('tip_plata');
+    const isPlata = tipPlataEl && tipPlataEl.checked;
+    const plataFields = document.getElementById('plata_fields');
+    const tipCheltuiala = document.getElementById('tip_cheltuiala');
+    const deductibilitate = document.getElementById('deductibilitate');
+
+    if (isPlata && plataFields && tipCheltuiala && deductibilitate) {
+      plataFields.style.display = 'block';
+      tipCheltuiala.disabled = false;
+      deductibilitate.disabled = false;
+    } else if (plataFields && tipCheltuiala && deductibilitate) {
+      plataFields.style.display = 'none';
+      tipCheltuiala.disabled = true;
+      deductibilitate.disabled = true;
+      tipCheltuiala.value = 'diverse';
+      deductibilitate.value = '100';
+    }
+  }
+
+  // Inițializare când DOM-ul este gata
+  function initForm() {
+    togglePlataFields();
+    
+    // Setează data de astăzi ca valoare implicită dacă input-ul este gol
+    const dataInput = document.getElementById('data');
+    if (dataInput) {
+      if (!dataInput.value) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        dataInput.value = year + '-' + month + '-' + day;
+      }
+      
+      // Deschide calendarul la click oriunde în input
+      dataInput.addEventListener('click', function() {
+        // Folosește showPicker() dacă este disponibil (API modern)
+        if (typeof dataInput.showPicker === 'function') {
+          try {
+            dataInput.showPicker();
+          } catch (e) {
+            // Fallback: focus și apoi click pe iconița calendarului
+            dataInput.focus();
+            dataInput.click();
+          }
+        } else {
+          // Fallback pentru browsere mai vechi
+          dataInput.focus();
+          // Simulează un click pe iconița calendarului
+          const event = new MouseEvent('mousedown', {
+            view: window,
+            bubbles: true,
+            cancelable: true
+          });
+          dataInput.dispatchEvent(event);
+        }
+      });
+      
+      // Deschide calendarul și la focus
+      dataInput.addEventListener('focus', function() {
+        if (typeof dataInput.showPicker === 'function') {
+          try {
+            dataInput.showPicker();
+          } catch (e) {
+            // Ignoră eroarea
+          }
+        }
+      });
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initForm);
+  } else {
+    initForm();
+  }
+
+  document.getElementById('tip_incasare')?.addEventListener('change', togglePlataFields);
+  document.getElementById('tip_plata')?.addEventListener('change', togglePlataFields);
+</script>
+
+<script>
+  // Submit form
+  const registruForm = document.getElementById('registru-form');
+  if (registruForm) {
+    registruForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      if (!form) return;
+      
+      const formData = new FormData(form);
+      
+      // Bootstrap Datepicker trimite deja formatul YYYY-MM-DD
+      // Verificăm doar că data este validă
+      const dataValue = formData.get('data');
+      const dataValueStr = dataValue ? String(dataValue) : '';
+      if (!dataValueStr || !/^\d{4}-\d{2}-\d{2}$/.test(dataValueStr)) {
+        const alertContainer = document.getElementById('alert-container');
+        if (alertContainer) {
+          alertContainer.innerHTML = '<div class="alert alert-danger">Te rog selectează o dată validă.</div>';
+        }
+        return;
+      }
+
+      const response = await fetch('/api/registru/save', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      const alertContainer = document.getElementById('alert-container');
+      
+      if (response.ok) {
+        if (alertContainer) {
+          alertContainer.innerHTML = '<div class="alert alert-success">' + (result.message || 'Înregistrare salvată cu succes!') + '</div>';
+        }
+        if (form && typeof form.reset === 'function') {
+          form.reset();
+        }
+        togglePlataFields();
+        // Resetează input-ul de dată
+        const dataInput = document.getElementById('data');
+        if (dataInput) {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          dataInput.value = year + '-' + month + '-' + day;
+        }
+      } else {
+        if (alertContainer) {
+          alertContainer.innerHTML = '<div class="alert alert-danger">' + (result.error || 'Eroare la salvare') + '</div>';
+        }
+      }
+    });
+  }
+</script>

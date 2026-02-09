@@ -1,0 +1,124 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { findSession } from '../lib/sessions';
+
+// Verificare autentificare
+const sessionId = Astro.cookies.get('session')?.value;
+if (!sessionId) {
+  return Astro.redirect('/login');
+}
+
+const session = await findSession(sessionId);
+if (!session) {
+  return Astro.redirect('/login');
+}
+
+const username = session.username;
+
+// Găsește toate PDF-urile pentru utilizator
+import { readdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import { join } from 'path';
+
+const pdfFiles: string[] = [];
+const possibleDirs = [
+  join(process.cwd(), 'data', 'registre'),
+  join(process.cwd(), 'OLD_PHP', 'writable', 'registre'),
+];
+
+// Caută în ambele locații
+for (const registreDir of possibleDirs) {
+  if (existsSync(registreDir)) {
+    try {
+      const files = await readdir(registreDir);
+      const matchingFiles = files
+        .filter(file => file.endsWith('.pdf') && file.toLowerCase().includes(username.toLowerCase()))
+        .map(file => file); // Păstrează numele fișierului
+      pdfFiles.push(...matchingFiles);
+    } catch (error) {
+      console.error(`Eroare la citirea directorului ${registreDir}:`, error);
+    }
+  }
+}
+
+// Elimină duplicatele și sortează
+const uniquePdfFiles = [...new Set(pdfFiles)].sort().reverse();
+---
+
+<Layout title="Registre Generate">
+  <div class="container-fluid py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-10 col-xl-8">
+        <div class="glass-card p-4 p-md-5">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0 text-white">📄 Registre PDF Generate</h1>
+            <a href="/dashboard" class="btn-back" style="background: rgba(255, 255, 255, 0.2); color: white; text-decoration: none; padding: 0.5rem 1.5rem; border-radius: 8px; transition: all 0.3s;">
+              ← Înapoi la Dashboard
+            </a>
+          </div>
+          
+          {uniquePdfFiles.length === 0 ? (
+            <div class="alert alert-warning" role="alert">
+              <strong>Nu există fișiere PDF generate.</strong>
+              <p class="mb-0 mt-2">Generează registrele din pagina de editare registru.</p>
+            </div>
+          ) : (
+            <div class="list-group">
+              {uniquePdfFiles.map((pdf) => (
+                <div class="list-group-item d-flex justify-content-between align-items-center mb-2" 
+                     style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px;">
+                  <div class="d-flex align-items-center">
+                    <span class="me-3">📄</span>
+                    <span class="text-white">{pdf}</span>
+                  </div>
+                  <a 
+                    href={`/api/registre/${encodeURIComponent(pdf)}`} 
+                    target="_blank"
+                    class="btn btn-sm"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 8px 20px; transition: all 0.3s ease;"
+                    onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';"
+                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';"
+                  >
+                    Deschide
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  .list-group-item {
+    transition: all 0.3s ease;
+  }
+
+  .list-group-item:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: translateX(5px);
+  }
+
+  .btn-back:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateX(-3px);
+  }
+
+  @media (max-width: 768px) {
+    .d-flex.justify-content-between {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start !important;
+    }
+  }
+</style>

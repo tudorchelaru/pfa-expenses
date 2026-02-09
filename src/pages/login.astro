@@ -1,0 +1,231 @@
+---
+// Redirect dacă e deja logat
+if (Astro.locals.user) {
+  return Astro.redirect('/dashboard');
+}
+---
+
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - PFA Expenses</title>
+  </head>
+  <body class="login-page">
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <span class="login-icon">💰</span>
+          <h1>PFA Expenses</h1>
+          <p>Gestionare cheltuieli PFA</p>
+        </div>
+        <div id="error-alert" class="alert-message error d-none"></div>
+        <div id="success-alert" class="alert-message success d-none"></div>
+        <form id="login-form" method="POST" action="/api/auth/login">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required autofocus />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <button type="submit" class="login-button">Login</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const formData = new FormData(form);
+        
+        const errorAlert = document.getElementById('error-alert');
+        const successAlert = document.getElementById('success-alert');
+        
+        // Ascunde alertele anterioare
+        errorAlert?.classList.add('d-none');
+        successAlert?.classList.add('d-none');
+        
+        try {
+          // Trimite ca FormData (mai simplu și mai compatibil)
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            body: formData
+          });
+          
+          let result;
+          try {
+            result = await response.json();
+          } catch (jsonError) {
+            console.error('Eroare la parsarea răspunsului:', jsonError);
+            errorAlert!.textContent = 'Eroare la comunicare cu serverul';
+            errorAlert!.classList.remove('d-none');
+            return;
+          }
+          
+          if (response.ok && result.success) {
+            errorAlert?.classList.add('d-none');
+            if (successAlert) {
+              successAlert.textContent = 'Autentificare reușită!';
+              successAlert.classList.remove('d-none');
+            }
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 500);
+          } else {
+            successAlert?.classList.add('d-none');
+            if (errorAlert) {
+              errorAlert.textContent = result.error || 'Eroare la autentificare';
+              errorAlert.classList.remove('d-none');
+            }
+          }
+        } catch (fetchError) {
+          console.error('Eroare la trimiterea request-ului:', fetchError);
+          if (errorAlert) {
+            errorAlert.textContent = 'Eroare de conexiune. Te rugăm să încerci din nou.';
+            errorAlert.classList.remove('d-none');
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  .login-page {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 2rem;
+  }
+
+  .login-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .login-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .login-header h1 {
+    font-size: 2rem;
+    color: #667eea;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+  }
+
+  .login-header p {
+    color: #666;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: white;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .login-button {
+    width: 100%;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  .login-button:active {
+    transform: translateY(0);
+  }
+
+  .alert-message {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .alert-message.error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+  }
+
+  .alert-message.success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+  }
+
+  .alert-message.d-none {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .login-container {
+      padding: 1rem;
+    }
+
+    .login-card {
+      padding: 2rem 1.5rem;
+    }
+  }
+</style>

@@ -1,0 +1,44 @@
+CRITICAL - 2025-05-25 07:42:31 --> Undefined variable: cls
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/editare_registru.php(51): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined varia...', '/home/avocatqt/...', 51, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/edita...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(648): view('dashboard/edita...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->editareRegistru()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}
+CRITICAL - 2025-05-25 07:43:48 --> Undefined variable: cls
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/editare_registru.php(52): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined varia...', '/home/avocatqt/...', 52, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/edita...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(648): view('dashboard/edita...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->editareRegistru()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}
+CRITICAL - 2025-05-25 07:44:07 --> Undefined variable: cls
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/editare_registru.php(52): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined varia...', '/home/avocatqt/...', 52, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/edita...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(648): view('dashboard/edita...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->editareRegistru()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}
+CRITICAL - 2025-05-25 07:44:09 --> Undefined variable: cls
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/editare_registru.php(52): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined varia...', '/home/avocatqt/...', 52, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/edita...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(648): view('dashboard/edita...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->editareRegistru()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}

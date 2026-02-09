@@ -1,0 +1,729 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+// Încarcă datele prin API
+let rows: any[] = [];
+
+try {
+  const response = await fetch(`${Astro.url.origin}/api/registru/list`, {
+    headers: {
+      Cookie: Astro.request.headers.get('Cookie') || ''
+    }
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    rows = data.rows || [];
+  }
+} catch (error) {
+  console.error('Eroare la încărcare:', error);
+}
+---
+
+<Layout title="Editare Registru - PFA Expenses">
+  <div class="registru-container">
+    <div class="registru-header">
+      <h2>📝 Editare Registru</h2>
+      <p class="subtitle">Gestionează toate înregistrările din registru</p>
+    </div>
+
+    <div id="alert-container"></div>
+
+    <!-- Modal pentru confirmare ștergere -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteConfirmModalLabel">
+              <span class="modal-icon">⚠️</span>
+              Confirmare ștergere
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-question">Ești sigur că vrei să ștergi această înregistrare?</p>
+            <div class="entry-details">
+              <div class="detail-item">
+                <span class="detail-label">Data:</span>
+                <span class="detail-value" id="modal-entry-date"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Tip:</span>
+                <span class="detail-value" id="modal-entry-type"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Suma:</span>
+                <span class="detail-value" id="modal-entry-sum"></span>
+              </div>
+            </div>
+            <p class="modal-warning">⚠️ Această acțiune nu poate fi anulată!</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              Anulează
+            </button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+              🗑️ Șterge înregistrarea
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {rows.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>Nu există înregistrări în registru.</p>
+        <a href="/registru" class="empty-button">Adaugă prima înregistrare</a>
+      </div>
+    ) : (
+      <div class="registru-table-container">
+        <div class="table-wrapper">
+          <table class="registru-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tip</th>
+                <th>Metodă</th>
+                <th>Suma</th>
+                <th>Tip Plată</th>
+                <th>Deductibilitate</th>
+                <th>Document</th>
+                <th>Acțiuni</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const tip = row.tip || '';
+                const isPlata = tip === 'plata';
+                const tipc = row.tip_cheltuiala || '';
+                const isLeasing = tipc === 'rata_leasing';
+                const isCincizeci = tipc === 'cincizeci_la_suta';
+                
+                return (
+                  <tr class={isPlata ? 'row-plata' : 'row-incasare'}>
+                    <td class="cell-date">{row.data}</td>
+                    <td>
+                      <span class={`badge ${isPlata ? 'badge-plata' : 'badge-incasare'}`}>
+                        {isPlata ? '💰 Plata' : '💵 Încasare'}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge-method">
+                        {row.metoda === 'numerar' ? '💵' : '🏦'} {row.metoda}
+                      </span>
+                    </td>
+                    <td class="cell-amount">{Number(row.suma).toFixed(2)} RON</td>
+                    <td class="cell-type">
+                      {row.tip_cheltuiala ? (
+                        <span class={`type-badge ${isLeasing ? 'type-leasing' : isCincizeci ? 'type-cincizeci' : 'type-diverse'}`}>
+                          {row.tip_cheltuiala === 'rata_leasing' ? '🚗 Leasing' : 
+                           row.tip_cheltuiala === 'cincizeci_la_suta' ? '50%' : 
+                           row.tip_cheltuiala}
+                        </span>
+                      ) : (
+                        <span class="type-badge type-na">-</span>
+                      )}
+                    </td>
+                    <td class="cell-deduct">
+                      <span class="deduct-badge">{row.deductibilitate || '100'}%</span>
+                    </td>
+                    <td class={`cell-document ${isLeasing ? 'doc-leasing' : isCincizeci ? 'doc-cincizeci' : ''}`}>
+                      {row.document}
+                    </td>
+                    <td class="cell-actions">
+                      <a href={`/editare-inregistrare/${row.index}`} class="action-btn edit-btn">
+                        ✏️ Editează
+                      </a>
+                      <button 
+                        class="action-btn delete-btn"
+                        data-entry-index={row.index}
+                        data-entry-date={row.data}
+                        data-entry-sum={row.suma}
+                        data-entry-type={row.tip}
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteConfirmModal"
+                      >
+                        🗑️ Șterge
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</Layout>
+
+<script>
+  (function() {
+    let entryToDelete: number | null = null;
+
+    // Setează datele în modal când se deschide
+    const deleteModal = document.getElementById('deleteConfirmModal');
+    if (deleteModal) {
+      deleteModal.addEventListener('show.bs.modal', function (event: Event) {
+        const button = (event as any).relatedTarget;
+        if (!button) return;
+        
+        const index = parseInt(button.getAttribute('data-entry-index') || '0');
+        const date = button.getAttribute('data-entry-date') || '';
+        const sum = button.getAttribute('data-entry-sum') || '0';
+        const type = button.getAttribute('data-entry-type') || '';
+        
+        entryToDelete = index;
+        
+        // Actualizează conținutul modalului
+        const dateEl = document.getElementById('modal-entry-date');
+        const typeEl = document.getElementById('modal-entry-type');
+        const sumEl = document.getElementById('modal-entry-sum');
+        
+        if (dateEl) dateEl.textContent = date || '-';
+        if (typeEl) typeEl.textContent = type === 'plata' ? '💰 Plata' : '💵 Încasare';
+        if (sumEl) sumEl.textContent = `${parseFloat(sum || '0').toFixed(2)} RON`;
+      });
+    }
+
+    // Confirmare ștergere
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+      confirmDeleteBtn.addEventListener('click', async function () {
+        if (entryToDelete === null) return;
+        
+        const index = entryToDelete;
+        const alertContainer = document.getElementById('alert-container');
+        const modalElement = document.getElementById('deleteConfirmModal');
+        
+        // Obține instanța modalului Bootstrap
+        let modal: any = null;
+        if (modalElement && (window as any).bootstrap) {
+          modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+        }
+        
+        // Dezactivează butonul pentru a preveni click-uri multiple
+        confirmDeleteBtn.setAttribute('disabled', 'disabled');
+        confirmDeleteBtn.textContent = '⏳ Se șterge...';
+        
+        try {
+          const response = await fetch(`/api/registru/delete/${index}`, {
+            method: 'DELETE'
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            // Închide modalul
+            if (modal) {
+              modal.hide();
+            } else if (modalElement) {
+              // Fallback: ascunde manual modalul
+              const bsModal = new (window as any).bootstrap.Modal(modalElement);
+              bsModal.hide();
+            }
+            
+            // Afișează mesaj de succes
+            if (alertContainer) {
+              alertContainer.innerHTML = `<div class="alert-message success">${result.message || 'Înregistrare ștearsă cu succes!'}</div>`;
+            }
+            
+            // Refresh pagina după 1 secundă
+            setTimeout(() => {
+              window.location.href = '/editare-registru';
+            }, 1000);
+          } else {
+            // Afișează eroare
+            if (alertContainer) {
+              alertContainer.innerHTML = `<div class="alert-message error">${result.error || 'Eroare la ștergere'}</div>`;
+            }
+            
+            // Reactivează butonul
+            confirmDeleteBtn.removeAttribute('disabled');
+            confirmDeleteBtn.textContent = '🗑️ Șterge înregistrarea';
+          }
+        } catch (error) {
+          console.error('Eroare la ștergere:', error);
+          if (alertContainer) {
+            alertContainer.innerHTML = `<div class="alert-message error">Eroare la comunicare cu serverul</div>`;
+          }
+          
+          // Reactivează butonul
+          confirmDeleteBtn.removeAttribute('disabled');
+          confirmDeleteBtn.textContent = '🗑️ Șterge înregistrarea';
+        }
+      });
+    }
+  })();
+</script>
+
+<style>
+  .registru-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .registru-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  }
+
+  .registru-header h2 {
+    font-size: 2rem;
+    color: #667eea;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+  }
+
+  .registru-header .subtitle {
+    color: #666;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state p {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-button {
+    display: inline-block;
+    padding: 0.875rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .empty-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  .registru-table-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    overflow-x: auto;
+    overflow-y: auto;
+    /* Ascunde scrollbar-urile dar păstrează funcționalitatea */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE și Edge */
+  }
+
+  .registru-table-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    /* Ascunde scrollbar-urile dar păstrează funcționalitatea */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE și Edge */
+  }
+
+  .table-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .registru-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1000px;
+  }
+
+  /* Ascunde scrollbar-urile pentru tabel */
+  .registru-table-container * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE și Edge */
+  }
+
+  .registru-table-container *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .registru-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .registru-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+  }
+
+  .registru-table tbody tr {
+    transition: all 0.2s;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .registru-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .row-plata {
+    background: rgba(255, 243, 205, 0.5);
+  }
+
+  .row-incasare {
+    background: rgba(212, 237, 218, 0.5);
+  }
+
+  .registru-table td {
+    padding: 1rem;
+    border: none;
+    font-size: 0.95rem;
+  }
+
+  .cell-date {
+    font-weight: 600;
+    color: #333;
+  }
+
+  .cell-amount {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 1.05rem;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+  }
+
+  .badge-plata {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+    color: #333;
+  }
+
+  .badge-incasare {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+  }
+
+  .badge-method {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+    color: #667eea;
+  }
+
+  .type-badge {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .type-leasing {
+    background: rgba(34, 197, 94, 0.2);
+    color: #16a34a;
+  }
+
+  .type-cincizeci {
+    background: rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+  }
+
+  .type-diverse {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+  }
+
+  .type-na {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+  }
+
+  .deduct-badge {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    background: rgba(102, 126, 234, 0.15);
+    border-radius: 6px;
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.85rem;
+  }
+
+  .cell-document {
+    font-weight: 500;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .doc-leasing {
+    color: #16a34a;
+    font-weight: 700;
+  }
+
+  .doc-cincizeci {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  .cell-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .edit-btn {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+    color: #333;
+    box-shadow: 0 2px 8px rgba(253, 160, 133, 0.3);
+  }
+
+  .edit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(253, 160, 133, 0.4);
+  }
+
+  .delete-btn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+  }
+
+  .delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+  }
+
+  .alert-message {
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .alert-message.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 2px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .alert-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 2px solid rgba(239, 68, 68, 0.3);
+  }
+
+  /* Modal Styles */
+  .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  .modal-header {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    color: white;
+    border-bottom: none;
+    padding: 1.5rem;
+  }
+
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  .modal-icon {
+    font-size: 1.5rem;
+  }
+
+  .btn-close {
+    filter: invert(1);
+    opacity: 0.9;
+  }
+
+  .btn-close:hover {
+    opacity: 1;
+  }
+
+  .modal-body {
+    padding: 2rem;
+  }
+
+  .modal-question {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .entry-details {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 2px solid rgba(102, 126, 234, 0.1);
+  }
+
+  .detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .detail-item:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  .detail-value {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 1rem;
+  }
+
+  .modal-warning {
+    background: rgba(245, 87, 108, 0.1);
+    color: #dc2626;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 0;
+    font-weight: 600;
+    text-align: center;
+    border: 2px solid rgba(245, 87, 108, 0.2);
+  }
+
+  .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+
+  .modal-footer .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+    border: none;
+  }
+
+  .modal-footer .btn-secondary {
+    background: rgba(0, 0, 0, 0.1);
+    color: #333;
+  }
+
+  .modal-footer .btn-secondary:hover {
+    background: rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .modal-footer .btn-danger {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+  }
+
+  .modal-footer .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
+  }
+
+  .modal-footer .btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @media (max-width: 768px) {
+    .registru-table-container {
+      padding: 1rem;
+    }
+
+    .registru-table {
+      font-size: 0.85rem;
+    }
+
+    .registru-table th,
+    .registru-table td {
+      padding: 0.75rem 0.5rem;
+    }
+
+    .cell-actions {
+      flex-direction: column;
+    }
+
+    .action-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>

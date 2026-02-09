@@ -1,0 +1,54 @@
+CRITICAL - 2024-11-22 06:24:39 --> Class 'App\Models\UserModel' not found
+#0 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\AuthController->authenticate()
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\AuthController))
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#3 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#4 {main}
+ERROR - 2024-11-22 06:57:31 --> Unknown column 'updated_at' in 'field list'
+CRITICAL - 2024-11-22 06:57:31 --> Unknown column 'updated_at' in 'field list'
+#0 /home/avocatqt/dev.avocatchelaru.ro/system/Database/MySQLi/Connection.php(292): mysqli->query('INSERT INTO `pa...', 0)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseConnection.php(670): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `pa...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseConnection.php(598): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `pa...')
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Database/BaseBuilder.php(1771): CodeIgniter\Database\BaseConnection->query('INSERT INTO `pa...', Array, false)
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/Model.php(239): CodeIgniter\Database\BaseBuilder->insert()
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/BaseModel.php(738): CodeIgniter\Model->doInsert(Array)
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/Model.php(625): CodeIgniter\BaseModel->insert(Array, false)
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/BaseModel.php(658): CodeIgniter\Model->insert(Array, false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(43): CodeIgniter\BaseModel->save(Array)
+#9 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->savePayment()
+#10 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#11 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#13 {main}
+CRITICAL - 2024-11-22 07:12:01 --> Undefined variable: payments
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/reports.php(13): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined varia...', '/home/avocatqt/...', 13, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/repor...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(24): view('dashboard/repor...')
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->reports()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}
+CRITICAL - 2024-11-22 09:09:39 --> View themes, no current section.
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/reports.php(138): CodeIgniter\View\View->endSection()
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/repor...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(92): view('dashboard/repor...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->reports()
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}
+CRITICAL - 2024-11-22 09:25:20 --> Invalid file: layout.php
+#0 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(198): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('layout.php')
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(226): CodeIgniter\View\View->render('layout', Array, true)
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/repor...', Array, true)
+#3 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(92): view('dashboard/repor...', Array)
+#4 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->reports()
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#8 {main}

@@ -1,0 +1,11 @@
+CRITICAL - 2025-05-26 03:24:55 --> Undefined index: deductibilitate
+#0 /home/avocatqt/dev.avocatchelaru.ro/app/Views/dashboard/editare_inregistrare.php(30): CodeIgniter\Debug\Exceptions->errorHandler(8, 'Undefined index...', '/home/avocatqt/...', 30, Array)
+#1 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(210): include('/home/avocatqt/...')
+#2 /home/avocatqt/dev.avocatchelaru.ro/system/View/View.php(213): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+#3 /home/avocatqt/dev.avocatchelaru.ro/system/Common.php(1089): CodeIgniter\View\View->render('dashboard/edita...', Array, true)
+#4 /home/avocatqt/dev.avocatchelaru.ro/app/Controllers/DashboardController.php(662): view('dashboard/edita...', Array)
+#5 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->editareInregistrare('0')
+#6 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
+#7 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
+#9 {main}

@@ -1,0 +1,180 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Verificare autentificare
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="Dashboard - PFA Expenses">
+  <div class="dashboard-container">
+    <div class="welcome-section">
+      <h1>Bine ai venit, <span class="username">{Astro.locals.user?.username}</span>! 👋</h1>
+      <p class="subtitle">Gestionare modernă pentru cheltuielile PFA</p>
+    </div>
+    
+    <div class="cards-grid">
+      <a href="/registru" class="action-card gradient-purple">
+        <div class="card-icon">➕</div>
+        <h3>Adaugă înregistrare</h3>
+        <p>Adaugă o nouă încasare sau plată în registru</p>
+        <span class="card-arrow">→</span>
+      </a>
+      
+      <a href="/editare-registru" class="action-card gradient-blue">
+        <div class="card-icon">📝</div>
+        <h3>Editare registru</h3>
+        <p>Vizualizează și editează înregistrările existente</p>
+        <span class="card-arrow">→</span>
+      </a>
+      
+      <a href="/genereaza-registre" class="action-card gradient-green">
+        <div class="card-icon">📄</div>
+        <h3>Generează PDF</h3>
+        <p>Generează registre PDF pentru fiecare an</p>
+        <span class="card-arrow">→</span>
+      </a>
+      
+      <a href="/registre" class="action-card gradient-orange">
+        <div class="card-icon">📚</div>
+        <h3>Vezi registre</h3>
+        <p>Listează și descarcă registrele generate</p>
+        <span class="card-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .welcome-section {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  }
+
+  .welcome-section h1 {
+    font-size: 2.5rem;
+    color: #1a1a1a;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+  }
+
+  .username {
+    color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .action-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    text-decoration: none;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.9;
+    z-index: -1;
+  }
+
+  .action-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .gradient-purple::before {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .gradient-blue::before {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  }
+
+  .gradient-green::before {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  .gradient-orange::before {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  }
+
+  .card-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .action-card h3 {
+    font-size: 1.5rem;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .action-card p {
+    margin: 0;
+    opacity: 0.95;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .card-arrow {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 2rem;
+    font-size: 1.5rem;
+    transition: transform 0.3s;
+  }
+
+  .action-card:hover .card-arrow {
+    transform: translateX(5px);
+  }
+
+  @media (max-width: 768px) {
+    .welcome-section h1 {
+      font-size: 2rem;
+    }
+
+    .cards-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
