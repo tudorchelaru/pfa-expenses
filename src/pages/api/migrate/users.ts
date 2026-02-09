@@ -10,12 +10,31 @@ export const GET: APIRoute = async () => {
   return await migrateUsers();
 };
 
-export const POST: APIRoute = async () => {
-  return await migrateUsers();
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json().catch(() => ({}));
+    return await migrateUsers(body.users);
+  } catch {
+    return await migrateUsers();
+  }
 };
 
-async function migrateUsers() {
+async function migrateUsers(usersFromBody?: any[]) {
   try {
+    // Dacă sunt trimiși utilizatori în body, folosește-i (suprascrie utilizatorii existenți)
+    if (usersFromBody && Array.isArray(usersFromBody) && usersFromBody.length > 0) {
+      await writeJSONFile('users', usersFromBody);
+      return new Response(JSON.stringify({ 
+        message: 'Utilizatorii au fost migrați/actualizați cu succes în Redis',
+        count: usersFromBody.length,
+        users: usersFromBody.map((u: any) => ({ id: u.id, username: u.username })),
+        overwritten: true
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Verifică dacă există deja utilizatori în Redis
     const existingUsers = await readJSONFile('users');
     if (existingUsers && existingUsers.length > 0) {
