@@ -17,6 +17,26 @@ async function ensureUsersFile() {
   const exists = await fileExists(USERS_KEY);
   
   if (!exists) {
+    // Încearcă să migreze din data/users.json dacă există (pentru development)
+    try {
+      const { readFile } = await import('fs/promises');
+      const { existsSync } = await import('fs');
+      const { join } = await import('path');
+      
+      const localUsersPath = join(process.cwd(), 'data', 'users.json');
+      if (existsSync(localUsersPath)) {
+        const content = await readFile(localUsersPath, 'utf-8');
+        const users = JSON.parse(content);
+        if (Array.isArray(users) && users.length > 0) {
+          console.log(`Migrare automată: ${users.length} utilizatori din data/users.json`);
+          await writeJSONFile(USERS_KEY, users);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Nu s-au putut migra utilizatori din data/users.json:', error);
+    }
+    
     // Creează un utilizator default (tudor) pentru prima dată
     const defaultUser: User = {
       id: 1,
@@ -26,6 +46,7 @@ async function ensureUsersFile() {
       updated_at: new Date().toISOString()
     };
     
+    console.log('Creare utilizator default: tudor');
     await writeJSONFile(USERS_KEY, [defaultUser]);
   }
 }
