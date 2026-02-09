@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { readJSONFile, writeJSONFile, fileExists } from './storage';
 
 export interface RegistruEntry {
   data: string;
@@ -79,45 +80,73 @@ export async function getRegistruPath(username: string, year?: string): Promise<
  * Citește toate înregistrările din toate fișierele de registru pentru un utilizator
  * Combină datele din toate fișierele care se potrivesc pattern-ului {username}_registru_*.json
  * Elimină duplicatele bazate pe data, tip, suma, document
+ * Verifică mai întâi în Redis, apoi în fișiere
  */
 export async function readRegistru(username: string): Promise<RegistruEntry[]> {
-  const files = await findRegistruFiles(username);
-  
-  if (files.length === 0) {
-    return [];
-  }
-  
-  // Prioritizează fișierele din data/ față de OLD_PHP/writable/
-  const sortedFiles = files.sort((a, b) => {
-    const aIsNew = a.includes('data/') ? 1 : 0;
-    const bIsNew = b.includes('data/') ? 1 : 0;
-    return bIsNew - aIsNew; // data/ primele
-  });
-  
+  const usernameLower = username.toLowerCase();
   const allEntries: RegistruEntry[] = [];
   const seenEntries = new Set<string>();
   
-  // Citește toate fișierele și combină datele, eliminând duplicatele
-  for (const filePath of sortedFiles) {
+  // Încearcă să citească din Redis (pentru fiecare an posibil)
+  // Verifică ultimii 3 ani + anul curent
+  const currentYear = new Date().getFullYear();
+  const yearsToCheck = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+  
+  for (const year of yearsToCheck) {
+    const redisKey = `registru:${usernameLower}:${year}`;
     try {
-      if (existsSync(filePath)) {
-        const content = await readFile(filePath, 'utf-8');
-        const data = JSON.parse(content);
-        if (Array.isArray(data)) {
-          for (const entry of data) {
-            // Creează o cheie unică pentru fiecare intrare
-            const entryKey = `${entry.data}|${entry.tip}|${entry.suma}|${entry.document}|${entry.metoda}`;
-            
-            // Adaugă doar dacă nu am văzut deja această intrare
-            if (!seenEntries.has(entryKey)) {
-              seenEntries.add(entryKey);
-              allEntries.push(entry);
-            }
+      const redisData = await readJSONFile(redisKey);
+      if (Array.isArray(redisData) && redisData.length > 0) {
+        for (const entry of redisData) {
+          const entryKey = `${entry.data}|${entry.tip}|${entry.suma}|${entry.document}|${entry.metoda}`;
+          if (!seenEntries.has(entryKey)) {
+            seenEntries.add(entryKey);
+            allEntries.push(entry);
           }
         }
       }
     } catch (error) {
-      console.error(`Eroare la citirea fișierului ${filePath}:`, error);
+      // Continuă dacă nu există în Redis
+    }
+  }
+  
+  // Dacă nu găsește în Redis, încearcă din fișiere (fallback)
+  if (allEntries.length === 0) {
+    const files = await findRegistruFiles(username);
+    
+    if (files.length === 0) {
+      return [];
+    }
+    
+    // Prioritizează fișierele din data/ față de OLD_PHP/writable/
+    const sortedFiles = files.sort((a, b) => {
+      const aIsNew = a.includes('data/') ? 1 : 0;
+      const bIsNew = b.includes('data/') ? 1 : 0;
+      return bIsNew - aIsNew; // data/ primele
+    });
+    
+    // Citește toate fișierele și combină datele, eliminând duplicatele
+    for (const filePath of sortedFiles) {
+      try {
+        if (existsSync(filePath)) {
+          const content = await readFile(filePath, 'utf-8');
+          const data = JSON.parse(content);
+          if (Array.isArray(data)) {
+            for (const entry of data) {
+              // Creează o cheie unică pentru fiecare intrare
+              const entryKey = `${entry.data}|${entry.tip}|${entry.suma}|${entry.document}|${entry.metoda}`;
+              
+              // Adaugă doar dacă nu am văzut deja această intrare
+              if (!seenEntries.has(entryKey)) {
+                seenEntries.add(entryKey);
+                allEntries.push(entry);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Eroare la citirea fișierului ${filePath}:`, error);
+      }
     }
   }
   
@@ -179,21 +208,7 @@ function getYearFromDate(dateString: string): string {
 export async function addRegistruEntry(username: string, entry: RegistruEntry): Promise<void> {
   const year = getYearFromDate(entry.data);
   const usernameLower = username.toLowerCase();
-  const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
-  
-  // Citește fișierul pentru anul respectiv (sau creează unul nou)
-  let entries: RegistruEntry[] = [];
-  if (existsSync(filePath)) {
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      const data = JSON.parse(content);
-      if (Array.isArray(data)) {
-        entries = data;
-      }
-    } catch (error) {
-      console.error(`Eroare la citirea fișierului ${filePath}:`, error);
-    }
-  }
+  const redisKey = `registru:${usernameLower}:${year}`;
   
   // Normalizează intrarea: pentru incasare, adaugă tip_cheltuiala: null dacă nu există deja
   const normalizedEntry = { ...entry };
@@ -201,17 +216,44 @@ export async function addRegistruEntry(username: string, entry: RegistruEntry): 
     normalizedEntry.tip_cheltuiala = null;
   }
   
+  // Încearcă să citească din Redis
+  let entries: RegistruEntry[] = [];
+  try {
+    const redisData = await readJSONFile(redisKey);
+    if (Array.isArray(redisData)) {
+      entries = redisData;
+    }
+  } catch (error) {
+    // Dacă nu există în Redis, încearcă din fișier (fallback)
+    const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
+    if (existsSync(filePath)) {
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        const data = JSON.parse(content);
+        if (Array.isArray(data)) {
+          entries = data;
+        }
+      } catch (fileError) {
+        console.error(`Eroare la citirea fișierului ${filePath}:`, fileError);
+      }
+    }
+  }
+  
   // Adaugă noua înregistrare
   entries.push(normalizedEntry);
   
-  // Asigură-te că directorul există
-  const dir = getDataPath();
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
+  // Salvează în Redis (sau fallback la fișier)
+  try {
+    await writeJSONFile(redisKey, entries);
+  } catch (error) {
+    // Fallback la fișier dacă Redis nu este disponibil
+    const dir = getDataPath();
+    if (!existsSync(dir)) {
+      await mkdir(dir, { recursive: true });
+    }
+    const filePath = join(dir, `${usernameLower}_registru_${year}.json`);
+    await writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
   }
-  
-  // Salvează în fișierul pentru anul respectiv
-  await writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
 }
 
 /**
@@ -226,15 +268,14 @@ export async function updateRegistruEntry(username: string, index: number, entry
     throw new Error('Index invalid');
   }
   
-  // Găsește fișierul original care conține această înregistrare
-  // Trebuie să găsim anul din înregistrarea originală
+  // Găsește anul din înregistrarea originală
   const originalEntry = allEntries[index];
   const originalYear = getYearFromDate(originalEntry.data);
   const newYear = getYearFromDate(entry.data);
   
   const usernameLower = username.toLowerCase();
-  const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
-  const newFilePath = join(getDataPath(), `${usernameLower}_registru_${newYear}.json`);
+  const originalRedisKey = `registru:${usernameLower}:${originalYear}`;
+  const newRedisKey = `registru:${usernameLower}:${newYear}`;
   
   // Normalizează intrarea: pentru incasare, adaugă tip_cheltuiala: null dacă nu există deja
   const normalizedEntry = { ...entry };
@@ -242,62 +283,118 @@ export async function updateRegistruEntry(username: string, index: number, entry
     normalizedEntry.tip_cheltuiala = null;
   }
   
-  // Dacă anul s-a schimbat, trebuie să mutăm înregistrarea în alt fișier
+  // Dacă anul s-a schimbat, trebuie să mutăm înregistrarea în alt an
   if (originalYear !== newYear) {
-    // Șterge din fișierul vechi
-    if (existsSync(originalFilePath)) {
-      const originalContent = await readFile(originalFilePath, 'utf-8');
-      const originalData = JSON.parse(originalContent);
-      if (Array.isArray(originalData)) {
-        // Găsește index-ul în fișierul original
-        const originalIndex = originalData.findIndex((e: RegistruEntry) => 
-          e.data === originalEntry.data &&
-          e.tip === originalEntry.tip &&
-          e.suma === originalEntry.suma &&
-          e.document === originalEntry.document
-        );
-        
-        if (originalIndex >= 0) {
-          originalData.splice(originalIndex, 1);
-          await writeFile(originalFilePath, JSON.stringify(originalData, null, 2), 'utf-8');
+    // Citește și șterge din anul vechi
+    let originalEntries: RegistruEntry[] = [];
+    try {
+      const redisData = await readJSONFile(originalRedisKey);
+      if (Array.isArray(redisData)) {
+        originalEntries = redisData;
+      }
+    } catch {
+      // Fallback la fișier
+      const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
+      if (existsSync(originalFilePath)) {
+        const content = await readFile(originalFilePath, 'utf-8');
+        const data = JSON.parse(content);
+        if (Array.isArray(data)) {
+          originalEntries = data;
         }
       }
     }
     
-    // Adaugă în fișierul nou
-    let newEntries: RegistruEntry[] = [];
-    if (existsSync(newFilePath)) {
-      const newContent = await readFile(newFilePath, 'utf-8');
-      const newData = JSON.parse(newContent);
-      if (Array.isArray(newData)) {
-        newEntries = newData;
+    // Găsește și șterge înregistrarea veche
+    const originalIndex = originalEntries.findIndex((e: RegistruEntry) => 
+      e.data === originalEntry.data &&
+      e.tip === originalEntry.tip &&
+      e.suma === originalEntry.suma &&
+      e.document === originalEntry.document
+    );
+    
+    if (originalIndex >= 0) {
+      originalEntries.splice(originalIndex, 1);
+      // Salvează anul vechi
+      try {
+        await writeJSONFile(originalRedisKey, originalEntries);
+      } catch {
+        const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
+        await writeFile(originalFilePath, JSON.stringify(originalEntries, null, 2), 'utf-8');
       }
     }
-    newEntries.push(normalizedEntry);
-    await writeFile(newFilePath, JSON.stringify(newEntries, null, 2), 'utf-8');
-  } else {
-    // Același an - actualizează în același fișier
-    if (existsSync(originalFilePath)) {
-      const content = await readFile(originalFilePath, 'utf-8');
-      const data = JSON.parse(content);
-      if (Array.isArray(data)) {
-        // Găsește index-ul în fișier
-        const fileIndex = data.findIndex((e: RegistruEntry) => 
-          e.data === originalEntry.data &&
-          e.tip === originalEntry.tip &&
-          e.suma === originalEntry.suma &&
-          e.document === originalEntry.document
-        );
-        
-        if (fileIndex >= 0) {
-          data[fileIndex] = normalizedEntry;
-          await writeFile(originalFilePath, JSON.stringify(data, null, 2), 'utf-8');
-        } else {
-          throw new Error('Înregistrarea nu a fost găsită în fișier');
+    
+    // Adaugă în anul nou
+    let newEntries: RegistruEntry[] = [];
+    try {
+      const redisData = await readJSONFile(newRedisKey);
+      if (Array.isArray(redisData)) {
+        newEntries = redisData;
+      }
+    } catch {
+      // Fallback la fișier
+      const newFilePath = join(getDataPath(), `${usernameLower}_registru_${newYear}.json`);
+      if (existsSync(newFilePath)) {
+        const content = await readFile(newFilePath, 'utf-8');
+        const data = JSON.parse(content);
+        if (Array.isArray(data)) {
+          newEntries = data;
         }
       }
+    }
+    
+    newEntries.push(normalizedEntry);
+    // Salvează anul nou
+    try {
+      await writeJSONFile(newRedisKey, newEntries);
+    } catch {
+      const newFilePath = join(getDataPath(), `${usernameLower}_registru_${newYear}.json`);
+      const dir = getDataPath();
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true });
+      }
+      await writeFile(newFilePath, JSON.stringify(newEntries, null, 2), 'utf-8');
+    }
+  } else {
+    // Același an - actualizează în același an
+    let entries: RegistruEntry[] = [];
+    try {
+      const redisData = await readJSONFile(originalRedisKey);
+      if (Array.isArray(redisData)) {
+        entries = redisData;
+      }
+    } catch {
+      // Fallback la fișier
+      const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
+      if (existsSync(originalFilePath)) {
+        const content = await readFile(originalFilePath, 'utf-8');
+        const data = JSON.parse(content);
+        if (Array.isArray(data)) {
+          entries = data;
+        }
+      } else {
+        throw new Error('Fișierul nu există');
+      }
+    }
+    
+    // Găsește și actualizează înregistrarea
+    const fileIndex = entries.findIndex((e: RegistruEntry) => 
+      e.data === originalEntry.data &&
+      e.tip === originalEntry.tip &&
+      e.suma === originalEntry.suma &&
+      e.document === originalEntry.document
+    );
+    
+    if (fileIndex >= 0) {
+      entries[fileIndex] = normalizedEntry;
+      // Salvează
+      try {
+        await writeJSONFile(originalRedisKey, entries);
+      } catch {
+        const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
+        await writeFile(originalFilePath, JSON.stringify(entries, null, 2), 'utf-8');
+      }
     } else {
-      throw new Error('Fișierul nu există');
+      throw new Error('Înregistrarea nu a fost găsită');
     }
   }
 }
@@ -317,21 +414,31 @@ export async function deleteRegistruEntry(username: string, index: number): Prom
   const entryToDelete = allEntries[index];
   const year = getYearFromDate(entryToDelete.data);
   const usernameLower = username.toLowerCase();
-  const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
+  const redisKey = `registru:${usernameLower}:${year}`;
   
-  if (!existsSync(filePath)) {
-    throw new Error('Fișierul nu există');
+  // Citește din Redis sau fișier
+  let entries: RegistruEntry[] = [];
+  try {
+    const redisData = await readJSONFile(redisKey);
+    if (Array.isArray(redisData)) {
+      entries = redisData;
+    }
+  } catch {
+    // Fallback la fișier
+    const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
+    if (!existsSync(filePath)) {
+      throw new Error('Fișierul nu există');
+    }
+    const content = await readFile(filePath, 'utf-8');
+    const data = JSON.parse(content);
+    if (!Array.isArray(data)) {
+      throw new Error('Format invalid de date');
+    }
+    entries = data;
   }
   
-  const content = await readFile(filePath, 'utf-8');
-  const data = JSON.parse(content);
-  
-  if (!Array.isArray(data)) {
-    throw new Error('Format invalid de date');
-  }
-  
-  // Găsește index-ul în fișier
-  const fileIndex = data.findIndex((e: RegistruEntry) => 
+  // Găsește index-ul în entries
+  const fileIndex = entries.findIndex((e: RegistruEntry) => 
     e.data === entryToDelete.data &&
     e.tip === entryToDelete.tip &&
     e.suma === entryToDelete.suma &&
@@ -339,11 +446,19 @@ export async function deleteRegistruEntry(username: string, index: number): Prom
   );
   
   if (fileIndex < 0) {
-    throw new Error('Înregistrarea nu a fost găsită în fișier');
+    throw new Error('Înregistrarea nu a fost găsită');
   }
   
-  data.splice(fileIndex, 1);
-  await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  entries.splice(fileIndex, 1);
+  
+  // Salvează în Redis sau fișier
+  try {
+    await writeJSONFile(redisKey, entries);
+  } catch {
+    // Fallback la fișier
+    const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
+    await writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
+  }
 }
 
 /**
