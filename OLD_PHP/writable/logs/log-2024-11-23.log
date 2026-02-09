@@ -1,6 +1,0 @@
-CRITICAL - 2024-11-23 06:42:31 --> Call to undefined method App\Controllers\DashboardController::compressImage()
-#0 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(832): App\Controllers\DashboardController->savePayment()
-#1 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(419): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\DashboardController))
-#2 /home/avocatqt/dev.avocatchelaru.ro/system/CodeIgniter.php(326): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
-#3 /home/avocatqt/dev.avocatchelaru.ro/public/index.php(37): CodeIgniter\CodeIgniter->run()
-#4 {main}
