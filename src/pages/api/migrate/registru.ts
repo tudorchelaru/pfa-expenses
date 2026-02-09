@@ -19,6 +19,12 @@ export const GET: APIRoute = async ({ url }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json().catch(() => ({}));
+    
+    // Dacă există date direct în body, migrează-le
+    if (body.entries && Array.isArray(body.entries) && body.username && body.year) {
+      return await migrateRegistruFromData(body.username, body.year, body.entries);
+    }
+    
     const username = body.username;
     const year = body.year;
     
@@ -27,10 +33,67 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     return await migrateAllRegistru();
-  } catch {
-    return await migrateAllRegistru();
+  } catch (error: any) {
+    return new Response(JSON.stringify({ 
+      error: 'Eroare la procesare request',
+      details: error.message 
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 };
+
+async function migrateRegistruFromData(username: string, year: string, entries: any[]) {
+  try {
+    const usernameLower = username.toLowerCase();
+    const redisKey = `registru:${usernameLower}:${year}`;
+    
+    // Verifică dacă există deja în Redis
+    const existing = await readJSONFile(redisKey);
+    if (existing && Array.isArray(existing) && existing.length > 0) {
+      return new Response(JSON.stringify({ 
+        message: `Registru pentru ${username} ${year} există deja în Redis`,
+        count: existing.length,
+        note: 'Folosește PUT pentru a suprascrie'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Validează entries
+    if (!Array.isArray(entries)) {
+      return new Response(JSON.stringify({ 
+        error: 'entries trebuie să fie un array'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Salvează în Redis
+    await writeJSONFile(redisKey, entries);
+    
+    return new Response(JSON.stringify({ 
+      message: `Registru pentru ${username} ${year} migrat cu succes în Redis`,
+      count: entries.length,
+      key: redisKey
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    console.error('Eroare la migrare registru din date:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Eroare la migrare',
+      details: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
 
 async function migrateSingleRegistru(username: string, year: string) {
   try {
@@ -104,8 +167,20 @@ async function migrateAllRegistru() {
     const dataDir = join(process.cwd(), 'data');
     
     if (!existsSync(dataDir)) {
+      // Pe Vercel, data/ nu există în build
       return new Response(JSON.stringify({ 
-        error: 'Directorul data/ nu există'
+        error: 'Directorul data/ nu există',
+        note: 'Pe Vercel, folosește POST cu datele JSON în body',
+        example: {
+          method: 'POST',
+          body: {
+            username: 'tudor',
+            year: '2026',
+            entries: [
+              { "data": "2026-02-09", "tip": "plata", ... }
+            ]
+          }
+        }
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
