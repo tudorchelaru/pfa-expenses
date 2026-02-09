@@ -13,6 +13,19 @@ export interface RegistruEntry {
   tip_cheltuiala?: string | null;
 }
 
+// Pe Vercel, filesystem-ul este read-only, folosim /tmp
+function getDataPath(): string {
+  // Pe Vercel, filesystem-ul este read-only, folosim /tmp
+  // Vercel setează automat variabila de mediu VERCEL
+  if (typeof process !== 'undefined' && process.env.VERCEL) {
+    return '/tmp';
+  }
+  if (import.meta.env.VERCEL) {
+    return '/tmp';
+  }
+  return import.meta.env.WRITEPATH || './data';
+}
+
 /**
  * Găsește toate fișierele de registru pentru un utilizator
  * Caută pattern-ul: {username}_registru_*.json
@@ -23,8 +36,8 @@ export async function findRegistruFiles(username: string): Promise<string[]> {
   const pattern = new RegExp(`^${usernameLower}_registru_.*\\.json$`);
   const files: string[] = [];
   
-  // Caută în folderul nou (data/)
-  const dataDir = import.meta.env.WRITEPATH || './data';
+  // Caută în folderul nou (data/ sau /tmp pe Vercel)
+  const dataDir = getDataPath();
   if (existsSync(dataDir)) {
     try {
       const dataFiles = await readdir(dataDir);
@@ -58,7 +71,7 @@ export async function getRegistruPath(username: string, year?: string): Promise<
   
   // Dacă nu există, creează un fișier nou cu anul specificat sau anul curent
   const targetYear = year || new Date().getFullYear().toString();
-  const newPath = join(import.meta.env.WRITEPATH || './data', `${usernameLower}_registru_${targetYear}.json`);
+  const newPath = join(getDataPath(), `${usernameLower}_registru_${targetYear}.json`);
   return { path: newPath, source: 'new' };
 }
 
@@ -130,7 +143,7 @@ export async function writeRegistru(username: string, entries: RegistruEntry[]):
   }
   
   // Asigură-te că directorul există
-  const dir = import.meta.env.WRITEPATH || './data';
+  const dir = getDataPath();
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
   }
@@ -166,7 +179,7 @@ function getYearFromDate(dateString: string): string {
 export async function addRegistruEntry(username: string, entry: RegistruEntry): Promise<void> {
   const year = getYearFromDate(entry.data);
   const usernameLower = username.toLowerCase();
-  const filePath = join(import.meta.env.WRITEPATH || './data', `${usernameLower}_registru_${year}.json`);
+  const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
   
   // Citește fișierul pentru anul respectiv (sau creează unul nou)
   let entries: RegistruEntry[] = [];
@@ -192,7 +205,7 @@ export async function addRegistruEntry(username: string, entry: RegistruEntry): 
   entries.push(normalizedEntry);
   
   // Asigură-te că directorul există
-  const dir = import.meta.env.WRITEPATH || './data';
+  const dir = getDataPath();
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
   }
@@ -220,8 +233,8 @@ export async function updateRegistruEntry(username: string, index: number, entry
   const newYear = getYearFromDate(entry.data);
   
   const usernameLower = username.toLowerCase();
-  const originalFilePath = join(import.meta.env.WRITEPATH || './data', `${usernameLower}_registru_${originalYear}.json`);
-  const newFilePath = join(import.meta.env.WRITEPATH || './data', `${usernameLower}_registru_${newYear}.json`);
+  const originalFilePath = join(getDataPath(), `${usernameLower}_registru_${originalYear}.json`);
+  const newFilePath = join(getDataPath(), `${usernameLower}_registru_${newYear}.json`);
   
   // Normalizează intrarea: pentru incasare, adaugă tip_cheltuiala: null dacă nu există deja
   const normalizedEntry = { ...entry };
@@ -304,7 +317,7 @@ export async function deleteRegistruEntry(username: string, index: number): Prom
   const entryToDelete = allEntries[index];
   const year = getYearFromDate(entryToDelete.data);
   const usernameLower = username.toLowerCase();
-  const filePath = join(import.meta.env.WRITEPATH || './data', `${usernameLower}_registru_${year}.json`);
+  const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
   
   if (!existsSync(filePath)) {
     throw new Error('Fișierul nu există');

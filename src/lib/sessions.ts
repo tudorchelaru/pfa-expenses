@@ -1,6 +1,4 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { readJSONFile, writeJSONFile, fileExists } from './storage';
 
 export interface Session {
   sessionId: string;
@@ -11,17 +9,15 @@ export interface Session {
   lastActivity: string; // Timestamp pentru ultima activitate
 }
 
-const SESSIONS_FILE = join(import.meta.env.WRITEPATH || './data', 'sessions.json');
+// Storage key pentru sesiuni
+const SESSIONS_KEY = 'sessions';
 
-// Inițializează fișierul de sesiuni
+// Inițializează sesiunile dacă nu există
 async function ensureSessionsFile() {
-  const dir = import.meta.env.WRITEPATH || './data';
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
-  }
+  const exists = await fileExists(SESSIONS_KEY);
   
-  if (!existsSync(SESSIONS_FILE)) {
-    await writeFile(SESSIONS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  if (!exists) {
+    await writeJSONFile(SESSIONS_KEY, []);
   }
 }
 
@@ -29,12 +25,10 @@ async function ensureSessionsFile() {
 async function getSessions(): Promise<Session[]> {
   await ensureSessionsFile();
   
-  if (!existsSync(SESSIONS_FILE)) {
+  const sessions = await readJSONFile(SESSIONS_KEY);
+  if (!sessions || !Array.isArray(sessions)) {
     return [];
   }
-  
-  const content = await readFile(SESSIONS_FILE, 'utf-8');
-  const sessions = JSON.parse(content);
   
   const now = new Date();
   const inactivityTimeout = 10 * 60 * 1000; // 10 minute în milisecunde
@@ -56,7 +50,7 @@ async function getSessions(): Promise<Session[]> {
   });
   
   if (activeSessions.length !== sessions.length) {
-    await writeFile(SESSIONS_FILE, JSON.stringify(activeSessions, null, 2), 'utf-8');
+    await writeJSONFile(SESSIONS_KEY, activeSessions);
   }
   
   return activeSessions;
@@ -81,7 +75,7 @@ export async function createSession(userId: number, username: string): Promise<s
   };
   
   sessions.push(session);
-  await writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  await writeJSONFile(SESSIONS_KEY, sessions);
   
   return sessionId;
 }
@@ -120,11 +114,11 @@ export async function updateSessionActivity(sessionId: string): Promise<void> {
     const sessions = await getSessions();
     const sessionIndex = sessions.findIndex(s => s.sessionId === sessionId);
     
-    if (sessionIndex !== -1) {
-      sessions[sessionIndex].lastActivity = new Date().toISOString();
-      await writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
-    }
-  } catch (error) {
+  if (sessionIndex !== -1) {
+    sessions[sessionIndex].lastActivity = new Date().toISOString();
+    await writeJSONFile(SESSIONS_KEY, sessions);
+  }
+} catch (error) {
     console.error('Eroare la actualizare activitate sesiune:', error);
     throw error;
   }
@@ -134,5 +128,5 @@ export async function updateSessionActivity(sessionId: string): Promise<void> {
 export async function deleteSession(sessionId: string): Promise<void> {
   const sessions = await getSessions();
   const filtered = sessions.filter(s => s.sessionId !== sessionId);
-  await writeFile(SESSIONS_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+  await writeJSONFile(SESSIONS_KEY, filtered);
 }

@@ -1,7 +1,5 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
 import bcrypt from 'bcryptjs';
+import { readJSONFile, writeJSONFile, fileExists } from './storage';
 
 export interface User {
   id: number;
@@ -11,18 +9,14 @@ export interface User {
   updated_at?: string;
 }
 
-// Fișierul de utilizatori - NU este accesibil public, doar pe server
-// Este exclus din git (.gitignore) pentru securitate
-const USERS_FILE = join(import.meta.env.WRITEPATH || './data', 'users.json');
+// Storage key pentru utilizatori
+const USERS_KEY = 'users';
 
-// Inițializează fișierul de utilizatori dacă nu există
+// Inițializează utilizatorii dacă nu există
 async function ensureUsersFile() {
-  const dir = import.meta.env.WRITEPATH || './data';
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
-  }
+  const exists = await fileExists(USERS_KEY);
   
-  if (!existsSync(USERS_FILE)) {
+  if (!exists) {
     // Creează un utilizator default (tudor) pentru prima dată
     const defaultUser: User = {
       id: 1,
@@ -32,7 +26,7 @@ async function ensureUsersFile() {
       updated_at: new Date().toISOString()
     };
     
-    await writeFile(USERS_FILE, JSON.stringify([defaultUser], null, 2), 'utf-8');
+    await writeJSONFile(USERS_KEY, [defaultUser]);
   }
 }
 
@@ -40,12 +34,8 @@ async function ensureUsersFile() {
 export async function getUsers(): Promise<User[]> {
   await ensureUsersFile();
   
-  if (!existsSync(USERS_FILE)) {
-    return [];
-  }
-  
-  const content = await readFile(USERS_FILE, 'utf-8');
-  return JSON.parse(content);
+  const users = await readJSONFile(USERS_KEY);
+  return users || [];
 }
 
 // Găsește un utilizator după username
@@ -83,7 +73,7 @@ export async function createUser(username: string, password: string): Promise<Us
   };
   
   users.push(newUser);
-  await writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  await writeJSONFile(USERS_KEY, users);
   
   return newUser;
 }
