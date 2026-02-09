@@ -72,16 +72,33 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
     
     // Creează sesiune
-    const sessionId = await createSession(user.id, user.username);
+    let sessionId: string;
+    try {
+      sessionId = await createSession(user.id, user.username);
+    } catch (sessionError) {
+      console.error('Eroare la creare sesiune:', sessionError);
+      return new Response(JSON.stringify({ error: 'Eroare la creare sesiune' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
     // Session cookie - expiră când se închide browserul (nu setăm maxAge)
-    cookies.set('session', sessionId, {
-      path: '/',
-      httpOnly: true,
-      secure: import.meta.env.PROD,
-      sameSite: 'lax'
-      // Nu setăm maxAge pentru ca cookie-ul să fie session cookie (expiră la închiderea browserului)
-    });
+    try {
+      cookies.set('session', sessionId, {
+        path: '/',
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: 'lax'
+        // Nu setăm maxAge pentru ca cookie-ul să fie session cookie (expiră la închiderea browserului)
+      });
+    } catch (cookieError) {
+      console.error('Eroare la setare cookie:', cookieError);
+      return new Response(JSON.stringify({ error: 'Eroare la setare cookie' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
     // Returnează success pentru ca frontend-ul să facă redirect
     return new Response(JSON.stringify({ success: true, message: 'Autentificare reușită' }), {
@@ -90,7 +107,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   } catch (error) {
     console.error('Eroare la autentificare:', error);
-    return new Response(JSON.stringify({ error: 'Eroare la autentificare' }), {
+    return new Response(JSON.stringify({ 
+      error: 'Eroare la autentificare',
+      details: error instanceof Error ? error.message : 'Eroare necunoscută'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

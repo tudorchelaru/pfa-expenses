@@ -116,12 +116,17 @@ export async function findSession(sessionId: string): Promise<Session | null> {
 
 // Actualizează ultima activitate pentru o sesiune
 export async function updateSessionActivity(sessionId: string): Promise<void> {
-  const sessions = await getSessions();
-  const sessionIndex = sessions.findIndex(s => s.sessionId === sessionId);
-  
-  if (sessionIndex !== -1) {
-    sessions[sessionIndex].lastActivity = new Date().toISOString();
-    await writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+  try {
+    const sessions = await getSessions();
+    const sessionIndex = sessions.findIndex(s => s.sessionId === sessionId);
+    
+    if (sessionIndex !== -1) {
+      sessions[sessionIndex].lastActivity = new Date().toISOString();
+      await writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+    }
+  } catch (error) {
+    console.error('Eroare la actualizare activitate sesiune:', error);
+    throw error;
   }
 }
 

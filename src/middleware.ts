@@ -10,15 +10,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
       const session = await findSession(sessionId);
       if (session) {
         // Actualizează ultima activitate pentru sesiune
-        await updateSessionActivity(sessionId);
+        // Doar dacă sesiunea există și este validă
+        try {
+          await updateSessionActivity(sessionId);
+        } catch (updateError) {
+          console.error('Eroare la actualizare activitate:', updateError);
+          // Continuă chiar dacă actualizarea eșuează
+        }
         
         context.locals.user = {
           id: session.userId,
           username: session.username
         };
+      } else {
+        // Sesiunea nu există sau a expirat - șterge cookie-ul
+        context.cookies.delete('session', { path: '/' });
       }
     } catch (error) {
       console.error('Eroare la verificare sesiune:', error);
+      // Șterge cookie-ul dacă există o eroare
+      context.cookies.delete('session', { path: '/' });
     }
   }
   
