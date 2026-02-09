@@ -40,3 +40,6 @@ data/
 !tsconfig.json
 !tailwind.config.cjs
 !astro.config.mjs
+
+# Public data (copiate pentru build, dar nu commit-ate)
+public/data/*_registru_*.json

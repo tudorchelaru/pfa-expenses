@@ -6,14 +6,35 @@ import { writeJSONFile, readJSONFile } from '../../../lib/storage';
 
 // Endpoint pentru migrare registre din data/*_registru_*.json în Redis
 export const GET: APIRoute = async ({ url }) => {
-  const username = url.searchParams.get('username');
-  const year = url.searchParams.get('year');
-  
-  if (username && year) {
-    return await migrateSingleRegistru(username, year);
-  }
-  
-  return await migrateAllRegistru();
+  // Pe Vercel, data/ nu există în build, deci GET returnează instrucțiuni
+  return new Response(JSON.stringify({
+    message: 'Pe Vercel, folosește POST pentru a migra registre',
+    instructions: {
+      method: 'POST',
+      endpoint: '/api/migrate/registru',
+      body: {
+        username: 'tudor',
+        year: '2026',
+        entries: [
+          {
+            "data": "2026-02-09",
+            "tip": "plata",
+            "metoda": "banca",
+            "suma": 86,
+            "valuta": "RON",
+            "document": "INVOICE YH5RFDWQ-0003 - CURSOR PRO",
+            "deductibilitate": 100,
+            "tip_cheltuiala": "diverse"
+          }
+        ]
+      }
+    },
+    note: 'Folosește scriptul: node scripts/migrate-to-redis.js',
+    localMigration: 'Pe local, poți folosi GET pentru migrare automată din fișiere'
+  }, null, 2), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 };
 
 export const POST: APIRoute = async ({ request }) => {
@@ -99,7 +120,6 @@ async function migrateSingleRegistru(username: string, year: string) {
   try {
     const usernameLower = username.toLowerCase();
     const fileName = `${usernameLower}_registru_${year}.json`;
-    const filePath = join(process.cwd(), 'data', fileName);
     
     // Verifică dacă există deja în Redis
     const redisKey = `registru:${usernameLower}:${year}`;
@@ -114,11 +134,25 @@ async function migrateSingleRegistru(username: string, year: string) {
       });
     }
     
-    // Citește din fișier
-    if (!existsSync(filePath)) {
+    // Caută fișierul în mai multe locații
+    const possiblePaths = [
+      join(process.cwd(), 'public', 'data', fileName), // Build (Vercel)
+      join(process.cwd(), 'data', fileName), // Development
+    ];
+    
+    let filePath: string | null = null;
+    for (const path of possiblePaths) {
+      if (existsSync(path)) {
+        filePath = path;
+        break;
+      }
+    }
+    
+    if (!filePath) {
       return new Response(JSON.stringify({ 
         error: `Fișierul ${fileName} nu există`,
-        path: filePath
+        searched: possiblePaths,
+        note: 'Asigură-te că ai rulat "npm run build" pentru a copia fișierele în public/data/'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
@@ -164,23 +198,28 @@ async function migrateSingleRegistru(username: string, year: string) {
 
 async function migrateAllRegistru() {
   try {
-    const dataDir = join(process.cwd(), 'data');
+    // Pe Vercel, caută în public/data/ (fișierele sunt incluse în build)
+    // Pe local, caută în data/
+    const possibleDirs = [
+      join(process.cwd(), 'public', 'data'), // Build (Vercel)
+      join(process.cwd(), 'data'), // Development
+      join(import.meta.url.includes('file://') ? new URL(import.meta.url).pathname : process.cwd(), 'public', 'data'),
+    ];
     
-    if (!existsSync(dataDir)) {
-      // Pe Vercel, data/ nu există în build
+    let dataDir: string | null = null;
+    for (const dir of possibleDirs) {
+      if (existsSync(dir)) {
+        dataDir = dir;
+        break;
+      }
+    }
+    
+    if (!dataDir) {
       return new Response(JSON.stringify({ 
-        error: 'Directorul data/ nu există',
-        note: 'Pe Vercel, folosește POST cu datele JSON în body',
-        example: {
-          method: 'POST',
-          body: {
-            username: 'tudor',
-            year: '2026',
-            entries: [
-              { "data": "2026-02-09", "tip": "plata", ... }
-            ]
-          }
-        }
+        error: 'Nu s-au găsit fișiere de registru',
+        searched: possibleDirs,
+        note: 'Asigură-te că ai rulat "npm run build" pentru a copia fișierele în public/data/',
+        alternative: 'Folosește POST cu datele JSON în body'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
@@ -267,7 +306,8 @@ async function migrateAllRegistru() {
         skipped,
         errors
       },
-      results
+      results,
+      note: migrated > 0 ? 'Fișierele migrate pot fi șterse din public/data/ după verificare' : null
     }, null, 2), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

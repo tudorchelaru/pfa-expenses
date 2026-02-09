@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "prebuild": "node scripts/copy-registru-to-public.js",
+    "build": "npm run prebuild && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "user:add": "node scripts/add-user.js",
