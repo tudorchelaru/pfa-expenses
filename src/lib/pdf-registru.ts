@@ -49,18 +49,36 @@ export async function generateRegistruPDFBuffer(
   const pageHeightLimit = mmToPt(190);
   setDocYmm(20);
 
-  const drawCell = (x: number, y: number, width: number, height: number, text: string, border: number = 1, align: 'L' | 'C' | 'R' = 'L', ln: number = 0): number => {
+  const drawCell = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    text: string,
+    border: number = 1,
+    align: 'L' | 'C' | 'R' = 'L',
+    ln: number = 0,
+    options?: { textLines?: string[]; valign?: 'top' | 'middle' }
+  ): number => {
     const rectX = mmToPt(x), rectY = mmToPt(y), rectWidth = mmToPt(width), rectHeight = mmToPt(height);
     if (border === 1) doc.rect(rectX, rectY, rectWidth, rectHeight).stroke();
     const currentLineHeight = doc.currentLineHeight(true);
-    const textY = rectY + rectHeight / 2 - currentLineHeight / 2;
     const textX = rectX + mmToPt(1);
     const textWidth = rectWidth - mmToPt(2);
-    doc.text(text, textX, textY, {
-      width: textWidth,
-      align: align === 'L' ? 'left' : align === 'C' ? 'center' : 'right',
-      lineGap: 0,
-      lineBreak: false
+    const lines = options?.textLines?.length ? options.textLines : [text];
+    let textY: number;
+    if (options?.valign === 'top' || lines.length > 1) {
+      textY = rectY + mmToPt(1);
+    } else {
+      textY = rectY + rectHeight / 2 - currentLineHeight / 2;
+    }
+    lines.forEach((line, index) => {
+      doc.text(line, textX, textY + index * currentLineHeight, {
+        width: textWidth,
+        align: align === 'L' ? 'left' : align === 'C' ? 'center' : 'right',
+        lineGap: 0,
+        lineBreak: false
+      });
     });
     if (ln === 1) doc.y = rectY + rectHeight;
     return x + width;
@@ -69,6 +87,8 @@ export async function generateRegistruPDFBuffer(
   let totalIncNumerar = 0, totalIncBanca = 0, totalPltNumerar = 0, totalPltBanca = 0;
   let currentX = 20;
   const rowHeight = 10, subRowHeight = 5, dataRowHeight = 8;
+  const documentColumnWidth = 70;
+  const documentCellInnerPadding = 2;
 
   doc.fontSize(14).font('Helvetica-Bold');
   doc.text(`Registru incasari si plati - ${year}`, { x: mmToPt(20), y: mmToPt(20), width: doc.page.width - mmToPt(40), align: 'center' });
@@ -119,7 +139,17 @@ export async function generateRegistruPDFBuffer(
     let entryIndex = 1;
 
     for (const entry of lunaData) {
-      if (doc.y + mmToPt(dataRowHeight) > pageHeightLimit) {
+      doc.fontSize(10).font('Helvetica');
+      const documentText = entry.document || 'Document';
+      const documentLines = doc.splitTextToSize(documentText, mmToPt(documentColumnWidth - documentCellInnerPadding));
+      if (documentLines.length === 0) {
+        documentLines.push(documentText);
+      }
+      const lineHeightMm = ptToMm(doc.currentLineHeight(true));
+      const documentHeightMm = lineHeightMm * Math.max(documentLines.length, 1);
+      const dynamicRowHeight = Math.max(dataRowHeight, documentHeightMm + 1);
+
+      if (doc.y + mmToPt(dynamicRowHeight) > pageHeightLimit) {
         doc.addPage();
         setDocYmm(20);
         setDocXmm(20);
@@ -158,11 +188,14 @@ export async function generateRegistruPDFBuffer(
       if (entry.tip === 'plata' && entry.metoda === 'banca') { cell[3] = formatNumber(sumaRon); pltBanca += sumaRon; }
 
       currentX = 20;
-      currentX = drawCell(currentX, rowY, 10, dataRowHeight, String(entryIndex++), 1, 'C', 0);
-      currentX = drawCell(currentX, rowY, 25, dataRowHeight, dataFormatata, 1, 'L', 0);
-      currentX = drawCell(currentX, rowY, 70, dataRowHeight, entry.document || 'Document', 1, 'L', 0);
-      for (let i = 0; i < 4; i++) currentX = drawCell(currentX, rowY, 30, dataRowHeight, cell[i], 1, 'R', 0);
-      setDocYmm(rowY + dataRowHeight);
+      currentX = drawCell(currentX, rowY, 10, dynamicRowHeight, String(entryIndex++), 1, 'C', 0);
+      currentX = drawCell(currentX, rowY, 25, dynamicRowHeight, dataFormatata, 1, 'L', 0);
+      currentX = drawCell(currentX, rowY, documentColumnWidth, dynamicRowHeight, '', 1, 'L', 0, {
+        textLines: documentLines,
+        valign: 'top'
+      });
+      for (let i = 0; i < 4; i++) currentX = drawCell(currentX, rowY, 30, dynamicRowHeight, cell[i], 1, 'R', 0);
+      setDocYmm(rowY + dynamicRowHeight);
     }
 
     doc.fontSize(10).font('Helvetica-Bold');
