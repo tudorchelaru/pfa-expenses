@@ -45,6 +45,7 @@ export async function generateRegistruPDFBuffer(
   const setDocYmm = (mm: number) => { doc.y = mmToPt(mm); };
   const addDocY = (mm: number) => { doc.y += mmToPt(mm); };
   const getDocYmm = () => ptToMm(doc.y);
+  const setDocXmm = (mm: number) => { doc.x = mmToPt(mm); };
   const pageHeightLimit = mmToPt(190);
   setDocYmm(20);
 
@@ -81,10 +82,17 @@ export async function generateRegistruPDFBuffer(
     if (doc.y + mmToPt(40) > pageHeightLimit) {
       doc.addPage();
       setDocYmm(20);
+      setDocXmm(20);
     }
 
     doc.fontSize(12).font('Helvetica-Bold');
-    doc.text(numeLuna.toUpperCase(), { x: mmToPt(20), y: doc.y, width: doc.page.width - mmToPt(40) });
+    setDocXmm(20);
+    doc.text(numeLuna.toUpperCase(), {
+      x: mmToPt(20),
+      y: doc.y,
+      width: doc.page.width - mmToPt(40),
+      align: 'left'
+    });
     addDocY(8);
 
     doc.fontSize(10).font('Helvetica-Bold');
@@ -114,6 +122,7 @@ export async function generateRegistruPDFBuffer(
       if (doc.y + mmToPt(dataRowHeight) > pageHeightLimit) {
         doc.addPage();
         setDocYmm(20);
+        setDocXmm(20);
         const newStartY = getDocYmm();
         doc.fontSize(10).font('Helvetica-Bold');
         currentX = 20;
@@ -172,6 +181,13 @@ export async function generateRegistruPDFBuffer(
     totalPltBanca += pltBanca;
   }
 
+  // Secțiunea finală necesită ~70mm. Dacă nu mai e spațiu, trece pe pagină nouă.
+  const summaryHeight = 70;
+  if (doc.y + mmToPt(summaryHeight) > pageHeightLimit) {
+    doc.addPage({ size: 'A4', layout: 'landscape', margins: { top: mmToPt(20), bottom: mmToPt(20), left: mmToPt(20), right: mmToPt(20) } });
+    setDocYmm(20);
+  }
+
   doc.fontSize(12).font('Helvetica-Bold');
   doc.text('TOTAL GENERAL ANUAL', { x: mmToPt(20), y: doc.y, width: doc.page.width - mmToPt(40), align: 'center' });
   addDocY(8);
@@ -188,7 +204,32 @@ export async function generateRegistruPDFBuffer(
 
   const totalIncasari = totalIncNumerar + totalIncBanca;
   const totalCheltuieli = totalPltNumerar + totalPltBanca;
-  const diff = totalIncasari - totalCheltuieli;
+  const profit = totalIncasari - totalCheltuieli;
+
+  // Calculează cheltuieli deductibile (50% + max 1500 leasing/lună)
+  const LEASING_CAP_PER_MONTH = 1500;
+  const leasingByMonth: Record<number, number> = {};
+  let cheltDeduct = 0;
+  for (let m = 1; m <= 12; m++) {
+    if (!months[m]) continue;
+    for (const entry of months[m]) {
+      if (entry.tip !== 'plata') continue;
+      const suma = parseFloat(entry.suma.toString());
+      const tip = entry.tip_cheltuiala || 'diverse';
+      const deduct = entry.deductibilitate ?? 100;
+      if (tip === 'rata_leasing') {
+        leasingByMonth[m] = (leasingByMonth[m] || 0) + suma;
+      } else {
+        cheltDeduct += suma * (deduct / 100);
+      }
+    }
+  }
+  for (const monthLeasing of Object.values(leasingByMonth)) {
+    cheltDeduct += Math.min(monthLeasing, LEASING_CAP_PER_MONTH);
+  }
+
+  const profitImpozabil = totalIncasari - cheltDeduct;
+  const impozit = Math.round(profitImpozabil * 0.1 * 100) / 100;
 
   const totalSimpleY = getDocYmm();
   currentX = 20;
@@ -198,8 +239,23 @@ export async function generateRegistruPDFBuffer(
 
   const profitY = totalSimpleY + dataRowHeight;
   currentX = 20;
-  currentX = drawCell(currentX, profitY, 105, dataRowHeight, diff >= 0 ? 'PROFIT:' : 'PIERDERE:', 1, 'L', 0);
-  currentX = drawCell(currentX, profitY, 120, dataRowHeight, formatNumber(Math.abs(diff)), 1, 'R', 1);
+  currentX = drawCell(currentX, profitY, 105, dataRowHeight, profit >= 0 ? 'PROFIT:' : 'PIERDERE:', 1, 'L', 0);
+  currentX = drawCell(currentX, profitY, 120, dataRowHeight, formatNumber(Math.abs(profit)), 1, 'R', 1);
+
+  const profitImpY = profitY + dataRowHeight;
+  currentX = 20;
+  currentX = drawCell(currentX, profitImpY, 105, dataRowHeight, 'PROFIT IMPOZABIL:', 1, 'L', 0);
+  currentX = drawCell(currentX, profitImpY, 120, dataRowHeight, formatNumber(profitImpozabil), 1, 'R', 1);
+
+  const impozitY = profitImpY + dataRowHeight;
+  currentX = 20;
+  currentX = drawCell(currentX, impozitY, 105, dataRowHeight, 'IMPOZIT (10%) aplicabil:', 1, 'L', 0);
+  currentX = drawCell(currentX, impozitY, 120, dataRowHeight, formatNumber(impozit), 1, 'R', 1);
+
+  const cheltDeductY = impozitY + dataRowHeight;
+  currentX = 20;
+  currentX = drawCell(currentX, cheltDeductY, 105, dataRowHeight, 'CHELT. DEDUCT.(50% + max 1500 leasing/luna):', 1, 'L', 0);
+  currentX = drawCell(currentX, cheltDeductY, 120, dataRowHeight, formatNumber(cheltDeduct), 1, 'R', 1);
 
   doc.end();
 
