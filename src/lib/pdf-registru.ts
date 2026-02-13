@@ -89,6 +89,64 @@ export async function generateRegistruPDFBuffer(
   const rowHeight = 10, subRowHeight = 5, dataRowHeight = 8;
   const documentColumnWidth = 70;
   const documentCellInnerPadding = 2;
+  const documentTextMaxWidthPt = mmToPt(documentColumnWidth - documentCellInnerPadding);
+  const wrapTextToWidth = (text: string): string[] => {
+    if (!text) {
+      return [''];
+    }
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    const breakLongWord = (word: string): string[] => {
+      if (doc.widthOfString(word) <= documentTextMaxWidthPt) {
+        return [word];
+      }
+      const parts: string[] = [];
+      let buffer = '';
+      for (let i = 0; i < word.length; i++) {
+        const nextBuffer = buffer + word[i];
+        if (doc.widthOfString(nextBuffer) <= documentTextMaxWidthPt) {
+          buffer = nextBuffer;
+          continue;
+        }
+        if (buffer) {
+          parts.push(buffer);
+        }
+        buffer = word[i];
+      }
+      if (buffer) {
+        parts.push(buffer);
+      }
+      return parts.length ? parts : [word];
+    };
+
+    const pushLine = () => {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
+      }
+    };
+
+    for (const word of words) {
+      const fragments = breakLongWord(word);
+      for (const fragment of fragments) {
+        const candidate = currentLine ? `${currentLine} ${fragment}` : fragment;
+        if (doc.widthOfString(candidate) <= documentTextMaxWidthPt) {
+          currentLine = candidate;
+        } else {
+          pushLine();
+          currentLine = fragment;
+        }
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines.length ? lines : [''];
+  };
 
   doc.fontSize(14).font('Helvetica-Bold');
   doc.text(`Registru incasari si plati - ${year}`, { x: mmToPt(20), y: mmToPt(20), width: doc.page.width - mmToPt(40), align: 'center' });
@@ -141,10 +199,7 @@ export async function generateRegistruPDFBuffer(
     for (const entry of lunaData) {
       doc.fontSize(10).font('Helvetica');
       const documentText = entry.document || 'Document';
-      const documentLines = doc.splitTextToSize(documentText, mmToPt(documentColumnWidth - documentCellInnerPadding));
-      if (documentLines.length === 0) {
-        documentLines.push(documentText);
-      }
+      const documentLines = wrapTextToWidth(documentText);
       const lineHeightMm = ptToMm(doc.currentLineHeight(true));
       const documentHeightMm = lineHeightMm * Math.max(documentLines.length, 1);
       const dynamicRowHeight = Math.max(dataRowHeight, documentHeightMm + 1);
