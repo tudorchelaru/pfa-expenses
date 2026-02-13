@@ -5,6 +5,7 @@ import { mkdir, unlink, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { generateRegistruPDFBuffer } from '../../lib/pdf-registru';
+import { invalidateRegistruPDFCache } from '../../lib/registru-cache';
 
 const isVercel = typeof process !== 'undefined' && !!process.env.VERCEL;
 
@@ -70,9 +71,11 @@ export const POST: APIRoute = async ({ cookies }) => {
       }
     }
 
+    const years = Object.keys(byYearMonth);
+    await invalidateRegistruPDFCache(username, years);
+
     // Pe Vercel: nu generăm pe disk, doar returnăm succes (PDF-urile se generează la cerere în /api/registre/[filename])
     if (isVercel) {
-      const years = Object.keys(byYearMonth);
       return new Response(JSON.stringify({
         message: `PDF-urile sunt disponibile. Mergi la Registre pentru a le deschide (se generează la cerere). Ani: ${years.join(', ')}`,
         years,
@@ -101,7 +104,6 @@ export const POST: APIRoute = async ({ cookies }) => {
       generatedFiles.push(filename);
     }
 
-    const years = Object.keys(byYearMonth);
     
     return new Response(JSON.stringify({ 
       message: `PDF-urile au fost generate cu succes pentru ${years.length} an(i): ${years.join(', ')}`,
