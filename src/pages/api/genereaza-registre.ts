@@ -6,6 +6,8 @@ import { existsSync, createWriteStream } from 'fs';
 import { join } from 'path';
 import PDFDocument from 'pdfkit';
 
+const isVercel = typeof process !== 'undefined' && !!process.env.VERCEL;
+
 export const POST: APIRoute = async ({ cookies }) => {
   // Verificare autentificare
   const sessionId = cookies.get('session')?.value;
@@ -59,10 +61,13 @@ export const POST: APIRoute = async ({ cookies }) => {
       byYearMonth[year][month].push(entry);
     }
 
-    // Creează directorul pentru PDF-uri dacă nu există
-    const registreDir = join(process.cwd(), 'data', 'registre');
-    if (!existsSync(registreDir)) {
-      await mkdir(registreDir, { recursive: true });
+    // Pe Vercel: nu scriem pe disk (filesystem read-only). PDF-urile se generează la cerere.
+    let registreDir: string | null = null;
+    if (!isVercel) {
+      registreDir = join(process.cwd(), 'data', 'registre');
+      if (!existsSync(registreDir)) {
+        await mkdir(registreDir, { recursive: true });
+      }
     }
 
     // Numele lunilor în română
@@ -86,7 +91,21 @@ export const POST: APIRoute = async ({ cookies }) => {
     const ptToMm = (value: number) => value / 2.834645669;
     const pageHeightLimit = mmToPt(190);
 
-    // Generează PDF-uri pentru fiecare an
+    // Pe Vercel: nu generăm pe disk, doar returnăm succes (PDF-urile se generează la cerere în /api/registre/[filename])
+    if (isVercel) {
+      const years = Object.keys(byYearMonth);
+      return new Response(JSON.stringify({
+        message: `PDF-urile sunt disponibile. Mergi la Registre pentru a le deschide (se generează la cerere). Ani: ${years.join(', ')}`,
+        years,
+        files: years.map(y => `${username}_registru_${y}.pdf`),
+        entryCount: entries.length
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Generează PDF-uri pe disk (doar local)
     for (const [year, months] of Object.entries(byYearMonth)) {
       const doc = new PDFDocument({
         size: 'A4',

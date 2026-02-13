@@ -3,9 +3,10 @@ import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { findSession } from '../../../lib/sessions';
+import { readRegistru } from '../../../lib/registru';
+import { generateRegistruPDFBuffer } from '../../../lib/pdf-registru';
 
 export const GET: APIRoute = async ({ params, cookies }) => {
-  // Verificare autentificare
   const sessionId = cookies.get('session')?.value;
   if (!sessionId) {
     return new Response('Neautorizat', { status: 401 });
@@ -23,12 +24,11 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     return new Response('Nume fișier lipsă', { status: 400 });
   }
 
-  // Verifică că fișierul aparține utilizatorului (securitate)
   if (!filename.toLowerCase().includes(username.toLowerCase())) {
     return new Response('Acces interzis', { status: 403 });
   }
 
-  // Căută fișierul în mai multe locații posibile
+  // Căută fișierul pe disk (local development)
   const possiblePaths = [
     join(process.cwd(), 'data', 'registre', filename),
     join(process.cwd(), 'OLD_PHP', 'writable', 'registre', filename),
@@ -42,14 +42,50 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     }
   }
 
-  if (!filePath) {
+  if (filePath) {
+    try {
+      const fileContent = await readFile(filePath);
+      return new Response(fileContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `inline; filename="${filename}"`,
+          'Cache-Control': 'public, max-age=3600',
+        },
+      });
+    } catch (error) {
+      console.error('Eroare la citirea PDF:', error);
+      return new Response('Eroare la citirea fișierului', { status: 500 });
+    }
+  }
+
+  // Pe Vercel sau când fișierul nu există: generează PDF la cerere
+  const match = filename.match(/^(.+)_registru_(\d{4})\.pdf$/i);
+  if (!match) {
     return new Response('Fișierul nu există', { status: 404 });
   }
 
+  const year = match[2];
   try {
-    const fileContent = await readFile(filePath);
-    
-    return new Response(fileContent, {
+    const entries = await readRegistru(username);
+    const byYearMonth: Record<number, typeof entries> = {};
+    for (const entry of entries) {
+      const date = new Date(entry.data);
+      if (isNaN(date.getTime())) continue;
+      const entryYear = date.getFullYear().toString();
+      if (entryYear !== year) continue;
+      const month = date.getMonth() + 1;
+      if (!byYearMonth[month]) byYearMonth[month] = [];
+      byYearMonth[month].push(entry);
+    }
+
+    const hasData = Object.values(byYearMonth).some(arr => arr.length > 0);
+    if (!hasData) {
+      return new Response('Nu există date pentru acest an', { status: 404 });
+    }
+
+    const buffer = await generateRegistruPDFBuffer(username, year, byYearMonth);
+    return new Response(buffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -58,7 +94,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       },
     });
   } catch (error) {
-    console.error('Eroare la citirea PDF:', error);
-    return new Response('Eroare la citirea fișierului', { status: 500 });
+    console.error('Eroare la generarea PDF:', error);
+    return new Response('Eroare la generarea PDF', { status: 500 });
   }
 };

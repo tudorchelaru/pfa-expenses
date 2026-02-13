@@ -1,8 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { findSession } from '../lib/sessions';
+import { readRegistru } from '../lib/registru';
+import { readdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
-// Verificare autentificare
 const sessionId = Astro.cookies.get('session')?.value;
 if (!sessionId) {
   return Astro.redirect('/login');
@@ -15,33 +18,38 @@ if (!session) {
 
 const username = session.username;
 
-// Găsește toate PDF-urile pentru utilizator
-import { readdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+// Pe Vercel: obține anii din datele registrului (PDF-urile se generează la cerere)
+// Local: poate exista și fișiere PDF pe disk
+let pdfFiles: string[] = [];
 
-const pdfFiles: string[] = [];
-const possibleDirs = [
-  join(process.cwd(), 'data', 'registre'),
-  join(process.cwd(), 'OLD_PHP', 'writable', 'registre'),
-];
-
-// Caută în ambele locații
-for (const registreDir of possibleDirs) {
-  if (existsSync(registreDir)) {
-    try {
-      const files = await readdir(registreDir);
-      const matchingFiles = files
-        .filter(file => file.endsWith('.pdf') && file.toLowerCase().includes(username.toLowerCase()))
-        .map(file => file); // Păstrează numele fișierului
-      pdfFiles.push(...matchingFiles);
-    } catch (error) {
-      console.error(`Eroare la citirea directorului ${registreDir}:`, error);
+if (process.env.VERCEL) {
+  const entries = await readRegistru(username);
+  const years = [...new Set(entries.map(e => e.data.substring(0, 4)))].filter(Boolean).sort().reverse();
+  pdfFiles = years.map(y => `${username}_registru_${y}.pdf`);
+} else {
+  const possibleDirs = [
+    join(process.cwd(), 'data', 'registre'),
+    join(process.cwd(), 'OLD_PHP', 'writable', 'registre'),
+  ];
+  for (const registreDir of possibleDirs) {
+    if (existsSync(registreDir)) {
+      try {
+        const files = await readdir(registreDir);
+        const matchingFiles = files
+          .filter(file => file.endsWith('.pdf') && file.toLowerCase().includes(username.toLowerCase()));
+        pdfFiles.push(...matchingFiles);
+      } catch (error) {
+        console.error(`Eroare la citirea directorului ${registreDir}:`, error);
+      }
     }
+  }
+  if (pdfFiles.length === 0) {
+    const entries = await readRegistru(username);
+    const years = [...new Set(entries.map(e => e.data.substring(0, 4)))].filter(Boolean).sort().reverse();
+    pdfFiles = years.map(y => `${username}_registru_${y}.pdf`);
   }
 }
 
-// Elimină duplicatele și sortează
 const uniquePdfFiles = [...new Set(pdfFiles)].sort().reverse();
 ---
 
