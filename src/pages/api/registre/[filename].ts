@@ -50,7 +50,8 @@ export const GET: APIRoute = async ({ params, cookies }) => {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `inline; filename="${filename}"`,
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': 'no-cache, max-age=0, s-maxage=0, must-revalidate',
+          'Pragma': 'no-cache'
         },
       });
     } catch (error) {
@@ -90,7 +91,8 @@ export const GET: APIRoute = async ({ params, cookies }) => {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${filename}"`,
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-cache, max-age=0, s-maxage=0, must-revalidate',
+        'Pragma': 'no-cache'
       },
     });
   } catch (error) {
