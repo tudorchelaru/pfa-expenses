@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { readJSONFile, writeJSONFile, fileExists } from './storage';
+import { invalidateRegistruPDFCache } from './registru-cache';
 
 export interface RegistruEntry {
   data: string;
@@ -254,6 +255,8 @@ export async function addRegistruEntry(username: string, entry: RegistruEntry): 
     const filePath = join(dir, `${usernameLower}_registru_${year}.json`);
     await writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
   }
+
+  await invalidateRegistruPDFCache(username, [year]);
 }
 
 /**
@@ -272,6 +275,7 @@ export async function updateRegistruEntry(username: string, index: number, entry
   const originalEntry = allEntries[index];
   const originalYear = getYearFromDate(originalEntry.data);
   const newYear = getYearFromDate(entry.data);
+  const invalidationYears = new Set<string>([originalYear, newYear]);
   
   const usernameLower = username.toLowerCase();
   const originalRedisKey = `registru:${usernameLower}:${originalYear}`;
@@ -397,6 +401,8 @@ export async function updateRegistruEntry(username: string, index: number, entry
       throw new Error('Înregistrarea nu a fost găsită');
     }
   }
+
+  await invalidateRegistruPDFCache(username, Array.from(invalidationYears));
 }
 
 /**
@@ -459,6 +465,8 @@ export async function deleteRegistruEntry(username: string, index: number): Prom
     const filePath = join(getDataPath(), `${usernameLower}_registru_${year}.json`);
     await writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
   }
+
+  await invalidateRegistruPDFCache(username, [year]);
 }
 
 /**
